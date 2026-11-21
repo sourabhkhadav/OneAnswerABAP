@@ -1,0 +1,177 @@
+<mvc:View
+    controllerName="zoa.zoarequestui.controller.Shell"
+    xmlns:mvc="sap.ui.core.mvc"
+    xmlns="sap.m"
+    xmlns:f="sap.f"
+    xmlns:card="sap.f.cards"
+    xmlns:l="sap.ui.layout"
+    displayBlock="true"
+    height="100%">
+
+    <Page showHeader="false" enableScrolling="true" class="sapUiContentPadding">
+
+        <customHeader>
+            <f:ShellBar
+                id="shellBar"
+                title="{i18n>shellTitle}"
+                primaryTitle="{i18n>shellTitle}"
+                showNotifications="true"
+                notificationsNumber="{shellModel>/alertCount}"
+                notificationsPress=".onNotificationsPress"/>
+        </customHeader>
+
+        <content>
+            <IconTabBar
+                id="mainTabBar"
+                expanded="true"
+                stretchContentHeight="false"
+                class="sapUiNoContentPadding">
+                <items>
+
+                    <!-- ═══════════════════════════════
+                         EVENTS & HOLIDAYS
+                    ═══════════════════════════════ -->
+                    <IconTabFilter
+                        key="events"
+                        icon="sap-icon://calendar"
+                        text="{i18n>tabEvents}"
+                        count="">
+                        <content>
+                            <List
+                                    id="eventsList"
+                                    items="{
+                                        path: '/EventsHolidays',
+                                        sorter: { path: 'EventDate', descending: false }
+                                    }"
+                                    noDataText="{i18n>eventsEmptyTitle}"
+                                    busyIndicatorDelay="0"
+                                    showSeparators="Inner"
+                                    headerText="All Events">
+                                    <ObjectListItem
+                                        title="{Title}"
+                                        number="{path: 'EventDate', type: 'sap.ui.model.odata.type.Date'}"
+                                        numberUnit=""
+                                        intro="{Topic}"
+                                        icon="sap-icon://calendar"
+                                        iconInset="false"
+                                        type="Active"
+                                        press=".onEventPress">
+                                        <attributes>
+                                            <ObjectAttribute title="Reason" text="{Reason}"/>
+                                        </attributes>
+                                        <firstStatus>
+                                            <ObjectStatus
+                                                text="Confirmed"
+                                                state="Success"
+                                                icon="sap-icon://accept"
+                                                inverted="true"/>
+                                        </firstStatus>
+                                    </ObjectListItem>
+                                </List>
+                        </content>
+                    </IconTabFilter>
+
+                    <!-- ═══════════════════════════════
+                         ALERTS
+                    ═══════════════════════════════ -->
+                    <IconTabFilter
+                        id="tabAlerts"
+                        key="alerts"
+                        icon="sap-icon://bell"
+                        text="{i18n>tabAlerts}">
+                        <content>
+                            <VBox class="sapUiSmallMarginBeginEnd sapUiSmallMarginTop">
+
+                                <Toolbar class="sapUiSmallMarginBottom" style="background:transparent;border:none">
+                                    <Title text="{i18n>alertsTitle}" level="H4"/>
+                                    <ToolbarSpacer/>
+                                    <ObjectStatus
+                                        text="{shellModel>/alertCount} Alerts"
+                                        state="Warning"
+                                        icon="sap-icon://bell"
+                                        visible="{= !!${shellModel>/alertCount} }"/>
+                                </Toolbar>
+
+                                <List
+                                    id="alertsList"
+                                    items="{
+                                        path: '/Alert',
+                                        sorter: { path: 'AlertDate', descending: true }
+                                    }"
+                                    noDataText="{i18n>alertsEmptyTitle}"
+                                    busyIndicatorDelay="0"
+                                    updateFinished=".onAlertsLoaded"
+                                    showSeparators="Inner">
+                                    <NotificationListItem
+                                        title="{AlertText}"
+                                        datetime="{path: 'AlertDate', type: 'sap.ui.model.odata.type.Date'}"
+                                        priority="Medium"
+                                        showCloseButton="true"
+                                        close=".onAlertClose"
+                                        authorName="System"
+                                        authorInitials="SY"
+                                        authorAvatarColor="Accent6"/>
+                                </List>
+
+                            </VBox>
+                        </content>
+                    </IconTabFilter>
+
+                    <!-- ═══════════════════════════════
+                         ASK
+                    ═══════════════════════════════ -->
+                    <IconTabFilter
+                        key="ask"
+                        icon="sap-icon://discussion"
+                        text="{i18n>tabAsk}">
+                        <content>
+                            <VBox class="sapUiSmallMarginBeginEnd sapUiSmallMarginTop">
+
+                                <!-- Chat feed -->
+                                <List
+                                    id="chatList"
+                                    items="{chat>/messages}"
+                                    showNoData="false"
+                                    showSeparators="None"
+                                    class="sapUiTinyMarginBottom">
+                                    <FeedListItem
+                                        sender="{chat>sender}"
+                                        text="{chat>text}"
+                                        timestamp="{chat>time}"
+                                        showIcon="true"
+                                        iconInitials="{chat>initials}"
+                                        iconDensityAware="false"
+                                        senderActive="false"/>
+                                </List>
+
+                                <!-- Busy -->
+                                <FlexBox justifyContent="Center" visible="{chat>/busy}" class="sapUiTinyMarginBottom">
+                                    <items><BusyIndicator/></items>
+                                </FlexBox>
+
+                                <!-- Input bar -->
+                                <Toolbar width="100%">
+                                    <Input
+                                        id="askInput"
+                                        placeholder="{i18n>askInputPlaceholder}"
+                                        submit=".onAskSend"
+                                        enabled="{= !${chat>/busy} }"
+                                        width="100%"/>
+                                    <ToolbarSpacer width="0.5rem"/>
+                                    <Button
+                                        icon="sap-icon://paper-plane"
+                                        type="Emphasized"
+                                        press=".onAskSend"
+                                        enabled="{= !${chat>/busy} }"
+                                        tooltip="Send"/>
+                                </Toolbar>
+
+                            </VBox>
+                        </content>
+                    </IconTabFilter>
+
+                </items>
+            </IconTabBar>
+        </content>
+    </Page>
+</mvc:View>

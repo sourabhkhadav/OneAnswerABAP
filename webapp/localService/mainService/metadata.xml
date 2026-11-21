@@ -158,9 +158,29 @@
                 <Parameter Name="Reason" Type="Edm.String" Nullable="false" MaxLength="255"/>
                 <ReturnType Type="com.sap.gateway.srvd.zoa_ui_oa_request.v0001.RequestType" Nullable="false"/>
             </Action>
+            <EntityType Name="AlertType">
+                <Key>
+                    <PropertyRef Name="AlertId"/>
+                </Key>
+                <Property Name="AlertId" Type="Edm.Guid" Nullable="false"/>
+                <Property Name="AlertDate" Type="Edm.Date" Nullable="false"/>
+                <Property Name="AlertText" Type="Edm.String" Nullable="false" MaxLength="255"/>
+            </EntityType>
+            <EntityType Name="EventsHolidaysType">
+                <Key>
+                    <PropertyRef Name="EventId"/>
+                </Key>
+                <Property Name="EventId" Type="Edm.Guid" Nullable="false"/>
+                <Property Name="Title" Type="Edm.String" Nullable="false" MaxLength="100"/>
+                <Property Name="Topic" Type="Edm.String" Nullable="false" MaxLength="10"/>
+                <Property Name="EventDate" Type="Edm.Date" Nullable="false"/>
+                <Property Name="Reason" Type="Edm.String" Nullable="false" MaxLength="255"/>
+            </EntityType>
             <EntityContainer Name="Container">
                 <EntitySet Name="Authority" EntityType="com.sap.gateway.srvd.zoa_ui_oa_request.v0001.AuthorityType"/>
                 <EntitySet Name="I_DraftAdministrativeData" EntityType="com.sap.gateway.srvd.zoa_ui_oa_request.v0001.I_DraftAdministrativeDataType"/>
+                <EntitySet Name="Alert" EntityType="com.sap.gateway.srvd.zoa_ui_oa_request.v0001.AlertType"/>
+                <EntitySet Name="EventsHolidays" EntityType="com.sap.gateway.srvd.zoa_ui_oa_request.v0001.EventsHolidaysType"/>
                 <EntitySet Name="Request" EntityType="com.sap.gateway.srvd.zoa_ui_oa_request.v0001.RequestType">
                     <NavigationPropertyBinding Path="DraftAdministrativeData" Target="I_DraftAdministrativeData"/>
                     <NavigationPropertyBinding Path="SiblingEntity" Target="Request"/>

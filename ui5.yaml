@@ -29,6 +29,14 @@ server:
       configuration:
         flp:
           theme: sap_horizon
+          intent:
+            object: app
+            action: preview
+          apps:
+            - intent:
+                object: student
+                action: preview
+              target: /student
 builder:
   resources:
     excludes:

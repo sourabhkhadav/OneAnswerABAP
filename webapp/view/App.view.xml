@@ -1,0 +1,8 @@
+<mvc:View
+    controllerName="zoa.zoarequestui.controller.App"
+    xmlns:mvc="sap.ui.core.mvc"
+    xmlns="sap.m"
+    displayBlock="true">
+
+    <App id="app" autoFocus="false"/>
+</mvc:View>

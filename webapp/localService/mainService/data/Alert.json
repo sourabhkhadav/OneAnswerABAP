@@ -1,0 +1,22 @@
+[
+  {
+    "AlertId": "11111111-0000-0000-0000-000000000001",
+    "AlertDate": "2026-11-20",
+    "AlertText": "Your request for Annual Day has been approved by the authority."
+  },
+  {
+    "AlertId": "11111111-0000-0000-0000-000000000002",
+    "AlertDate": "2026-11-18",
+    "AlertText": "Reminder: Submit supporting documents for your Sports Day request by Nov 25."
+  },
+  {
+    "AlertId": "11111111-0000-0000-0000-000000000003",
+    "AlertDate": "2026-11-15",
+    "AlertText": "Your request for Industrial Visit has been rejected. Reason: Budget constraints."
+  },
+  {
+    "AlertId": "11111111-0000-0000-0000-000000000004",
+    "AlertDate": "2026-11-10",
+    "AlertText": "New holiday declared: College Foundation Day on 05 Dec 2026."
+  }
+]

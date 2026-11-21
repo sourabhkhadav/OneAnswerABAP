@@ -1,0 +1,13 @@
+/* Ensure standalone view fills full viewport */
+.sapUiView { height: 100% !important; }
+
+/* Ask tab: chat bubble alignment */
+.zoaAskUserBubble {
+    align-self: flex-end;
+    max-width: 75%;
+}
+
+.zoaAskBotBubble {
+    align-self: flex-start;
+    max-width: 75%;
+}
