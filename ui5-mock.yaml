@@ -41,7 +41,7 @@ server:
           - urlPath: /sap/opu/odata4/sap/zoa_ui_oa_request_o4/srvd/sap/zoa_ui_oa_request/0001
             metadataPath: ./webapp/localService/mainService/metadata.xml
             mockdataPath: ./webapp/localService/mainService/data
-            generateMockData: true
+            generateMockData: false
         annotations: []
 builder:
   resources:

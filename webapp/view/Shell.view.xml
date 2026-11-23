@@ -127,6 +127,14 @@
                         <content>
                             <VBox class="sapUiSmallMarginBeginEnd sapUiSmallMarginTop">
 
+                                <!-- Suggestion Chips -->
+                                <HBox wrap="Wrap" class="sapUiTinyMarginBottom">
+                                    <Button text="Upcoming holidays?" type="Transparent" press=".onChipPress" class="sapUiTinyMarginEnd sapUiTinyMarginBottom"/>
+                                    <Button text="Annual function date &amp; status?" type="Transparent" press=".onChipPress" class="sapUiTinyMarginEnd sapUiTinyMarginBottom"/>
+                                    <Button text="Minimum attendance rule?" type="Transparent" press=".onChipPress" class="sapUiTinyMarginEnd sapUiTinyMarginBottom"/>
+                                    <Button text="Status of Class Trip?" type="Transparent" press=".onChipPress" class="sapUiTinyMarginEnd sapUiTinyMarginBottom"/>
+                                </HBox>
+
                                 <!-- Chat feed -->
                                 <List
                                     id="chatList"

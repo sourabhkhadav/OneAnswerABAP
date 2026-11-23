@@ -8,3 +8,7 @@ mta-*
 resources
 archive.zip
 .*_mta_build_tmp
+
+# Local configuration & secrets
+webapp/config.js
+test_ai.js
