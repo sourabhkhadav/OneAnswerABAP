@@ -36,7 +36,7 @@
                         icon="sap-icon://calendar"
                         text="{i18n>tabEvents}">
                         <content>
-                            <VBox class="sapUiMediumMarginBeginEnd sapUiSmallMarginTop">
+                            <VBox class="zoaContentContainer">
                                 <Toolbar class="zoaHeaderToolbar">
                                     <Title text="Confirmed Events &amp; Holidays" level="H3" class="zoaSectionTitle"/>
                                     <ToolbarSpacer/>
@@ -98,7 +98,7 @@
                         icon="sap-icon://request"
                         text="Requests">
                         <content>
-                            <VBox class="sapUiMediumMarginBeginEnd sapUiSmallMarginTop">
+                            <VBox class="zoaContentContainer">
                                 <Toolbar class="zoaHeaderToolbar">
                                     <Title text="SAP Requests (Live Table ZOA_OA_REQUEST)" level="H3" class="zoaSectionTitle"/>
                                     <ToolbarSpacer/>
@@ -162,7 +162,7 @@
                         icon="sap-icon://bell"
                         text="{i18n>tabAlerts}">
                         <content>
-                            <VBox class="sapUiMediumMarginBeginEnd sapUiSmallMarginTop">
+                            <VBox class="zoaContentContainer">
                                 <Toolbar class="zoaHeaderToolbar">
                                     <Title text="{i18n>alertsTitle}" level="H3" class="zoaSectionTitle"/>
                                     <ToolbarSpacer/>
@@ -216,7 +216,7 @@
                         icon="sap-icon://discussion"
                         text="{i18n>tabAsk}">
                         <content>
-                            <VBox class="zoaChatContainer sapUiMediumMarginTop">
+                            <VBox class="zoaContentContainer zoaChatContainer">
                                 <!-- Suggestion Chips -->
                                 <HBox wrap="Wrap" class="sapUiSmallMarginBottom">
                                     <Button text="Upcoming holidays?" type="Transparent" press=".onChipPress" class="zoaChipButton"/>
@@ -234,20 +234,24 @@
                                     showSeparators="None"
                                     class="sapUiTinyMarginBottom">
                                     <CustomListItem class="zoaChatMessageItem">
-                                        <!-- User Message Bubble -->
-                                        <VBox visible="{= ${chat>sender} === 'You' }" class="zoaUserBubble">
-                                            <Text text="{chat>text}" class="zoaUserBubbleText"/>
-                                            <Text text="{chat>time}" class="zoaUserTime"/>
-                                        </VBox>
-                                        <!-- AI Assistant Message Bubble -->
-                                        <VBox visible="{= ${chat>sender} !== 'You' }" class="zoaBotBubble">
-                                            <HBox class="zoaBotHeader">
-                                                <core:Icon src="sap-icon://da" size="1.1rem" color="#0070F2"/>
-                                                <Text text="One Answer AI" class="zoaBotName"/>
-                                                <Text text="· {chat>time}" class="zoaBotTime"/>
-                                            </HBox>
-                                            <FormattedText htmlText="{path: 'chat>text', formatter: '.formatAiResponse'}" class="zoaBotBubbleText"/>
-                                        </VBox>
+                                        <!-- User Message Bubble (Right-aligned, fits content) -->
+                                        <HBox visible="{= ${chat>sender} === 'You' }" justifyContent="End" width="100%">
+                                            <VBox class="zoaUserBubble">
+                                                <Text text="{chat>text}" class="zoaUserBubbleText"/>
+                                                <Text text="{chat>time}" class="zoaUserTime"/>
+                                            </VBox>
+                                        </HBox>
+                                        <!-- AI Assistant Message Bubble (Left-aligned, clean card) -->
+                                        <HBox visible="{= ${chat>sender} !== 'You' }" justifyContent="Start" width="100%">
+                                            <VBox class="zoaBotBubble">
+                                                <HBox class="zoaBotHeader" alignItems="Center">
+                                                    <core:Icon src="sap-icon://da" size="1rem" color="#0070F2"/>
+                                                    <Text text="One Answer AI" class="zoaBotName"/>
+                                                    <Text text="· {chat>time}" class="zoaBotTime"/>
+                                                </HBox>
+                                                <FormattedText htmlText="{path: 'chat>text', formatter: '.formatAiResponse'}" class="zoaBotBubbleText"/>
+                                            </VBox>
+                                        </HBox>
                                     </CustomListItem>
                                 </List>
 
@@ -257,21 +261,23 @@
                                 </FlexBox>
 
                                 <!-- Input Bar -->
-                                <HBox alignItems="Center" class="zoaInputBar sapUiSmallMarginTop">
+                                <HBox alignItems="Center" class="zoaInputBar sapUiSmallMarginTop" width="100%">
                                     <Input
                                         id="askInput"
                                         placeholder="Type your question about holidays, events, or authority decisions..."
                                         submit=".onAskSend"
                                         enabled="{= !${chat>/busy} }"
-                                        width="100%"
-                                        class="zoaChatInput"/>
-                                    <ToolbarSpacer width="0.5rem"/>
+                                        class="zoaChatInput">
+                                        <layoutData>
+                                            <FlexItemData growFactor="1"/>
+                                        </layoutData>
+                                    </Input>
                                     <Button
                                         icon="sap-icon://paper-plane"
                                         press=".onAskSend"
                                         enabled="{= !${chat>/busy} }"
                                         tooltip="Send Message"
-                                        class="zoaSendButton"/>
+                                        class="zoaSendButton sapUiTinyMarginBegin"/>
                                 </HBox>
                             </VBox>
                         </content>

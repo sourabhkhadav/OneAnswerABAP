@@ -630,23 +630,21 @@ sap.ui.define([
 
             var s = sText.replace(/\s*\.\.\.\s*(MORE|LESS)/gi, "");
 
-            // 1. Separate notes first so they don't get treated as bullets
-            s = s.replace(/\s*\*?(Note:?\s*)/gi, "\n\nNote: ");
-
-            // 2. Separate inline numbered sequences: e.g. "holidays: 1. " or "...yyyy 2. "
+            // 1. Separate inline numbered sequences if collapsed into one line
             s = s.replace(/([^\n])\s+(\d+[\.\)]\s+)/g, "$1\n\n$2");
 
-            // 3. Separate bullet/property items: " * **Date:**" or " * **Status:**" etc.
+            // 2. Separate inline bullet properties: " * **Date:**"
             s = s.replace(/(?:^|\s+)[\*\-•]\s*(\*\*[a-zA-Z\s]+:?\*\*)/g, "\n   - $1");
 
-            // 4. Markdown headers
+            // 3. Markdown headers
             s = s.replace(/^### (.*$)/gim, "<h4>$1</h4>");
             s = s.replace(/^## (.*$)/gim, "<h3>$1</h3>");
 
-            // 5. Markdown bold and italic
+            // 4. Markdown bold and italic
             s = s.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
             s = s.replace(/(^|[^\*])\*([^\*]+)\*([^\*]|$)/g, "$1<em>$2</em>$3");
 
+            var aMonths = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
             var aLines = s.split("\n");
             var aProcessed = [];
 
@@ -656,40 +654,53 @@ sap.ui.define([
                     continue;
                 }
 
-                // Note block
-                if (/^Note:/i.test(sLine)) {
+                // Dedicated Note Callout (ONLY if the line starts with Note:)
+                var noteMatch = sLine.match(/^(?:<strong>)?(?:ℹ️\s*)?Note:\s*(?:<\/strong>)?(.*)/i);
+                if (noteMatch) {
                     aProcessed.push(
-                        "<p style=\"background:#F8FAFC; border:1px dashed #CBD5E1; padding:8px 12px; margin:12px 0 4px 0; border-radius:6px; color:#475569; font-size:0.9rem;\">" +
-                        "<strong style=\"color:#0070F2;\">ℹ️ Note: </strong>" + sLine.replace(/^Note:\s*/i, "") +
+                        "<p style=\"background:#F8FAFC; border-left:3px solid #0070F2; padding:6px 10px; margin:10px 0 4px 0; border-radius:0 6px 6px 0; color:#334155; font-size:0.88rem;\">" +
+                        "<strong style=\"color:#0070F2;\">ℹ️ Note: </strong>" + noteMatch[1].trim() +
                         "</p>"
                     );
                     continue;
                 }
 
-                // Numbered sequence card: "1. Holiday on 24 Nov"
+                // Numbered Sequence Heading: e.g. "1. Holiday on 24 nov"
                 var numMatch = sLine.match(/^(\d+[\.\)])\s*(.*)/);
                 if (numMatch) {
                     aProcessed.push(
-                        "<p style=\"background:#EFF6FF; border-left:4px solid #0070F2; padding:6px 12px; margin:10px 0 4px 0; border-radius:0 6px 6px 0; font-weight:bold; color:#0070F2;\">" +
-                        numMatch[1] + " " + numMatch[2] +
+                        "<p style=\"margin:10px 0 2px 0; font-size:0.95rem; color:#0F172A;\">" +
+                        "<span style=\"color:#0070F2; font-weight:700; margin-right:4px;\">" + numMatch[1] + "</span> " +
+                        "<strong>" + numMatch[2].replace(/^<strong>|<\/strong>$/g, "") + "</strong>" +
                         "</p>"
                     );
                     continue;
                 }
 
-                // Bullet point: "- Date: ..."
+                // Bullet point detail: "- Date: ..."
                 var bulletMatch = sLine.match(/^[\*\-•]\s*(.*)/);
                 if (bulletMatch) {
+                    var sContent = bulletMatch[1];
+                    // Format dates like 2026-11-24 to 24 Nov 2026
+                    sContent = sContent.replace(/\b(\d{4})-(\d{2})-(\d{2})\b/g, function (m, y, mo, d) {
+                        var iM = parseInt(mo, 10) - 1;
+                        return parseInt(d, 10) + " " + (aMonths[iM] || mo) + " " + y;
+                    });
+                    // Highlight Confirmed or Pending nicely
+                    sContent = sContent.replace(/\b(Confirmed)\b/gi, "<span style=\"color:#16A34A; font-weight:600;\">Confirmed</span>");
+                    sContent = sContent.replace(/\b(Pending)\b/gi, "<span style=\"color:#D97706; font-weight:600;\">Pending</span>");
+                    sContent = sContent.replace(/\b(Rejected|Cancelled)\b/gi, "<span style=\"color:#DC2626; font-weight:600;\">Not happening</span>");
+
                     aProcessed.push(
-                        "<p style=\"margin:2px 0 2px 16px; line-height:1.45; color:#334155;\">" +
-                        "<span style=\"color:#0070F2; font-weight:bold; margin-right:8px;\">•</span>" + bulletMatch[1] +
+                        "<p style=\"margin:1px 0 1px 16px; color:#475569; font-size:0.88rem; line-height:1.45;\">" +
+                        "<span style=\"color:#0070F2; font-weight:bold; margin-right:6px;\">•</span>" + sContent +
                         "</p>"
                     );
                     continue;
                 }
 
-                // Regular line
-                aProcessed.push("<p style=\"margin:6px 0 4px 0; line-height:1.5; color:#1E293B;\">" + sLine + "</p>");
+                // Regular conversational line
+                aProcessed.push("<p style=\"margin:4px 0; line-height:1.5; color:#1E293B;\">" + sLine + "</p>");
             }
 
             return aProcessed.join("");
