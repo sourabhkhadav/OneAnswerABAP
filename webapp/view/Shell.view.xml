@@ -46,7 +46,8 @@
                                 <List
                                     id="eventsList"
                                     items="{
-                                        path: '/EventsHolidays',
+                                        path: '/Request',
+                                        filters: [{ path: 'Status', operator: 'EQ', value1: 'C' }],
                                         sorter: { path: 'EventDate', descending: false }
                                     }"
                                     noDataText="{i18n>eventsEmptyTitle}"
@@ -62,7 +63,8 @@
                                         type="Active"
                                         press=".onEventPress">
                                         <attributes>
-                                            <ObjectAttribute title="Reason" text="{Reason}"/>
+                                            <ObjectAttribute title="Reason" text="{= ${DecisionReason} || ${Reason} }"/>
+                                            <ObjectAttribute title="Authority" text="{AuthorityRole}" visible="{= !!${AuthorityRole} }"/>
                                         </attributes>
                                         <firstStatus>
                                             <ObjectStatus

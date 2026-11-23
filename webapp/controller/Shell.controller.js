@@ -41,7 +41,7 @@ sap.ui.define([
     // ─────────────────────────────────────────────────────────────
     var ENTITY_SETS = {
         request: "Request",          // Main RAP entity: Create, Update, Delete, Actions
-        event: "EventsHolidays",     // Confirmed Events/Holidays (or 'Event' in CDS definition)
+        event: "Event",              // Confirmed Events/Holidays (or 'EventsHolidays' depending on CDS publication)
         alert: "Alert",              // Student Alerts/Notifications
         authority: "Authority"       // Approval authority mapping
     };
