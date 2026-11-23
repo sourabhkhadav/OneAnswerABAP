@@ -37,7 +37,13 @@
                         text="{i18n>tabEvents}"
                         count="">
                         <content>
-                            <List
+                            <VBox class="sapUiSmallMarginBeginEnd sapUiSmallMarginTop">
+                                <Toolbar class="sapUiSmallMarginBottom" style="background:transparent;border:none">
+                                    <Title text="All Events &amp; Holidays" level="H4"/>
+                                    <ToolbarSpacer/>
+                                    <Button icon="sap-icon://refresh" type="Transparent" press=".onRefreshPress" tooltip="Refresh Events from SAP"/>
+                                </Toolbar>
+                                <List
                                     id="eventsList"
                                     items="{
                                         path: '/EventsHolidays',
@@ -45,8 +51,7 @@
                                     }"
                                     noDataText="{i18n>eventsEmptyTitle}"
                                     busyIndicatorDelay="0"
-                                    showSeparators="Inner"
-                                    headerText="All Events">
+                                    showSeparators="Inner">
                                     <ObjectListItem
                                         title="{Title}"
                                         number="{path: 'EventDate', type: 'sap.ui.model.odata.type.Date'}"
@@ -68,6 +73,58 @@
                                         </firstStatus>
                                     </ObjectListItem>
                                 </List>
+                            </VBox>
+                        </content>
+                    </IconTabFilter>
+
+                    <!-- ═══════════════════════════════
+                         MY REQUESTS (LIVE SAP RAP TABLE)
+                    ═══════════════════════════════ -->
+                    <IconTabFilter
+                        id="tabRequests"
+                        key="requests"
+                        icon="sap-icon://request"
+                        text="Requests">
+                        <content>
+                            <VBox class="sapUiSmallMarginBeginEnd sapUiSmallMarginTop">
+                                <Toolbar class="sapUiSmallMarginBottom" style="background:transparent;border:none">
+                                    <Title text="SAP Requests (Live Table ZOA_OA_REQUEST)" level="H4"/>
+                                    <ToolbarSpacer/>
+                                    <Button text="New Request" icon="sap-icon://add" type="Emphasized" press=".onOpenCreateDialog"/>
+                                    <Button icon="sap-icon://refresh" type="Transparent" press=".onRefreshPress" tooltip="Refresh from SAP"/>
+                                </Toolbar>
+                                <List
+                                    id="requestsList"
+                                    items="{
+                                        path: '/Request',
+                                        sorter: { path: 'EventDate', descending: false }
+                                    }"
+                                    noDataText="No requests found in SAP database"
+                                    busyIndicatorDelay="0"
+                                    showSeparators="Inner">
+                                    <CustomListItem>
+                                        <HBox alignItems="Center" justifyContent="SpaceBetween" class="sapUiSmallMargin">
+                                            <VBox>
+                                                <Title text="{Title}" level="H5"/>
+                                                <Label text="{Topic} · {path: 'EventDate', type: 'sap.ui.model.odata.type.Date'} · Authority: {AuthorityRole}" design="Bold"/>
+                                                <Text text="{Description}" visible="{= !!${Description} }"/>
+                                                <Text text="Decision: {DecisionReason}" visible="{= !!${DecisionReason} }" class="sapUiTinyMarginTop"/>
+                                            </VBox>
+                                            <HBox alignItems="Center">
+                                                <ObjectStatus
+                                                    text="{StatusText}"
+                                                    state="{= ${Status} === 'C' ? 'Success' : (${Status} === 'N' ? 'Error' : 'Warning') }"
+                                                    class="sapUiSmallMarginEnd"/>
+                                                <Button
+                                                    icon="sap-icon://delete"
+                                                    type="Transparent"
+                                                    tooltip="Delete Request"
+                                                    press=".onDeleteRequestPress"/>
+                                            </HBox>
+                                        </HBox>
+                                    </CustomListItem>
+                                </List>
+                            </VBox>
                         </content>
                     </IconTabFilter>
 
@@ -85,6 +142,7 @@
                                 <Toolbar class="sapUiSmallMarginBottom" style="background:transparent;border:none">
                                     <Title text="{i18n>alertsTitle}" level="H4"/>
                                     <ToolbarSpacer/>
+                                    <Button icon="sap-icon://refresh" type="Transparent" press=".onRefreshPress" tooltip="Refresh Alerts from SAP"/>
                                     <ObjectStatus
                                         text="{shellModel>/alertCount} Alerts"
                                         state="Warning"

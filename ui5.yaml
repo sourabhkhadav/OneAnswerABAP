@@ -18,6 +18,7 @@ server:
         backend:
           - path: /sap
             url: https://eight20s.mydomain.com:44360
+            client: "800"
     - name: fiori-tools-appreload
       afterMiddleware: compression
       configuration:

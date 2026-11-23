@@ -43,7 +43,6 @@
           "annotations": [
             "annotation"
           ],
-          "localUri": "localService/mainService/metadata.xml",
           "odataVersion": "4.0"
         }
       }
@@ -92,9 +91,11 @@
         "dataSource": "mainService",
         "preload": true,
         "settings": {
+          "synchronizationMode": "None",
           "operationMode": "Server",
           "autoExpandSelect": true,
-          "earlyRequests": true
+          "earlyRequests": true,
+          "groupId": "$auto"
         }
       },
       "@i18n": {

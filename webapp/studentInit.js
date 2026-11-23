@@ -21,7 +21,8 @@ sap.ui.define([
         synchronizationMode: "None",
         operationMode: "Server",
         autoExpandSelect: true,
-        earlyRequests: true
+        earlyRequests: true,
+        groupId: "$auto"
     });
 
     var oDeviceModel = new JSONModel(Device);

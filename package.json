@@ -17,9 +17,10 @@
     "@sap-ux/ui5-middleware-fe-mockserver": "2"
   },
   "scripts": {
-    "start": "fiori run --open \"test/flp.html#app-preview\"",
-    "start-student": "fiori run --open \"/student.html\"",
+    "start": "ui5 serve --config=ui5.yaml --accept-remote-connections --open student.html",
+    "start-student": "ui5 serve --config=ui5.yaml --accept-remote-connections --open student.html",
     "start-student-mock": "fiori run --config ./ui5-mock.yaml --open \"/student.html\"",
+    "start-fiori": "fiori run --config ./ui5.yaml --open \"/student.html\"",
     "start-local": "fiori run --config ./ui5-local.yaml --open \"test/flp.html#app-preview\"",
     "build": "ui5 build --config=ui5.yaml --clean-dest --dest dist",
     "lint": "eslint ./",
