@@ -3,12 +3,11 @@
     xmlns:mvc="sap.ui.core.mvc"
     xmlns="sap.m"
     xmlns:f="sap.f"
-    xmlns:card="sap.f.cards"
-    xmlns:l="sap.ui.layout"
+    xmlns:core="sap.ui.core"
     displayBlock="true"
     height="100%">
 
-    <Page showHeader="false" enableScrolling="true" class="sapUiContentPadding">
+    <Page showHeader="false" enableScrolling="true" class="zoaPageContainer">
 
         <customHeader>
             <f:ShellBar
@@ -17,7 +16,8 @@
                 primaryTitle="{i18n>shellTitle}"
                 showNotifications="true"
                 notificationsNumber="{shellModel>/alertCount}"
-                notificationsPress=".onNotificationsPress"/>
+                notificationsPress=".onNotificationsPress"
+                class="zoaShellBar"/>
         </customHeader>
 
         <content>
@@ -25,23 +25,22 @@
                 id="mainTabBar"
                 expanded="true"
                 stretchContentHeight="false"
-                class="sapUiNoContentPadding">
+                class="zoaTabBar">
                 <items>
 
                     <!-- ═══════════════════════════════
-                         EVENTS & HOLIDAYS
+                         EVENTS & HOLIDAYS (CONFIRMED)
                     ═══════════════════════════════ -->
                     <IconTabFilter
                         key="events"
                         icon="sap-icon://calendar"
-                        text="{i18n>tabEvents}"
-                        count="">
+                        text="{i18n>tabEvents}">
                         <content>
-                            <VBox class="sapUiSmallMarginBeginEnd sapUiSmallMarginTop">
-                                <Toolbar class="sapUiSmallMarginBottom" style="background:transparent;border:none">
-                                    <Title text="All Events &amp; Holidays" level="H4"/>
+                            <VBox class="sapUiMediumMarginBeginEnd sapUiSmallMarginTop">
+                                <Toolbar class="zoaHeaderToolbar">
+                                    <Title text="Confirmed Events &amp; Holidays" level="H3" class="zoaSectionTitle"/>
                                     <ToolbarSpacer/>
-                                    <Button icon="sap-icon://refresh" type="Transparent" press=".onRefreshPress" tooltip="Refresh Events from SAP"/>
+                                    <Button icon="sap-icon://refresh" type="Transparent" press=".onRefreshPress" tooltip="Refresh Events from SAP" class="zoaRefreshButton"/>
                                 </Toolbar>
                                 <List
                                     id="eventsList"
@@ -52,35 +51,46 @@
                                     }"
                                     noDataText="{i18n>eventsEmptyTitle}"
                                     busyIndicatorDelay="0"
-                                    showSeparators="Inner">
-                                    <ObjectListItem
-                                        title="{Title}"
-                                        number="{path: 'EventDate', type: 'sap.ui.model.odata.type.Date'}"
-                                        numberUnit=""
-                                        intro="{Topic}"
-                                        icon="sap-icon://calendar"
-                                        iconInset="false"
-                                        type="Active"
-                                        press=".onEventPress">
-                                        <attributes>
-                                            <ObjectAttribute title="Reason" text="{= ${DecisionReason} || ${Reason} }"/>
-                                            <ObjectAttribute title="Authority" text="{AuthorityRole}" visible="{= !!${AuthorityRole} }"/>
-                                        </attributes>
-                                        <firstStatus>
-                                            <ObjectStatus
-                                                text="Confirmed"
-                                                state="Success"
-                                                icon="sap-icon://accept"
-                                                inverted="true"/>
-                                        </firstStatus>
-                                    </ObjectListItem>
+                                    showSeparators="None">
+                                    <CustomListItem class="zoaCardItem">
+                                        <HBox alignItems="Center" justifyContent="SpaceBetween" width="100%">
+                                            <HBox alignItems="Center" class="sapUiTinyMargin">
+                                                <!-- Calendar Date Tile -->
+                                                <VBox class="zoaDateBox" justifyContent="Center" alignItems="Center">
+                                                    <Text text="{path: 'EventDate', formatter: '.formatDateMonth'}" class="zoaDateMonth"/>
+                                                    <Text text="{path: 'EventDate', formatter: '.formatDateDay'}" class="zoaDateDay"/>
+                                                </VBox>
+                                                <!-- Event Details -->
+                                                <VBox>
+                                                    <HBox alignItems="Center" class="sapUiTinyMarginBottom">
+                                                        <Text text="{Topic}" class="zoaTopicPill zoaTopicHoliday sapUiTinyMarginEnd"/>
+                                                        <Title text="{Title}" level="H4"/>
+                                                    </HBox>
+                                                    <HBox alignItems="Center" visible="{= !!${DecisionReason} }">
+                                                        <core:Icon src="sap-icon://comment" size="0.85rem" color="#64748B" class="sapUiTinyMarginEnd"/>
+                                                        <Text text="Reason: {DecisionReason}" class="sapUiTinyMarginBottom"/>
+                                                    </HBox>
+                                                    <Text text="Approved by {AuthorityRole}" visible="{= !!${AuthorityRole} }"/>
+                                                </VBox>
+                                            </HBox>
+                                            <!-- Status Pill -->
+                                            <HBox alignItems="Center">
+                                                <ObjectStatus
+                                                    text="Confirmed"
+                                                    state="Success"
+                                                    icon="sap-icon://accept"
+                                                    inverted="true"
+                                                    class="sapUiSmallMarginEnd"/>
+                                            </HBox>
+                                        </HBox>
+                                    </CustomListItem>
                                 </List>
                             </VBox>
                         </content>
                     </IconTabFilter>
 
                     <!-- ═══════════════════════════════
-                         MY REQUESTS (LIVE SAP RAP TABLE)
+                         MY REQUESTS (LIVE SAP TABLE)
                     ═══════════════════════════════ -->
                     <IconTabFilter
                         id="tabRequests"
@@ -88,12 +98,12 @@
                         icon="sap-icon://request"
                         text="Requests">
                         <content>
-                            <VBox class="sapUiSmallMarginBeginEnd sapUiSmallMarginTop">
-                                <Toolbar class="sapUiSmallMarginBottom" style="background:transparent;border:none">
-                                    <Title text="SAP Requests (Live Table ZOA_OA_REQUEST)" level="H4"/>
+                            <VBox class="sapUiMediumMarginBeginEnd sapUiSmallMarginTop">
+                                <Toolbar class="zoaHeaderToolbar">
+                                    <Title text="SAP Requests (Live Table ZOA_OA_REQUEST)" level="H3" class="zoaSectionTitle"/>
                                     <ToolbarSpacer/>
-                                    <Button text="New Request" icon="sap-icon://add" type="Emphasized" press=".onOpenCreateDialog"/>
-                                    <Button icon="sap-icon://refresh" type="Transparent" press=".onRefreshPress" tooltip="Refresh from SAP"/>
+                                    <Button text="New Request" icon="sap-icon://add" type="Emphasized" press=".onOpenCreateDialog" class="zoaPrimaryButton sapUiTinyMarginEnd"/>
+                                    <Button icon="sap-icon://refresh" type="Transparent" press=".onRefreshPress" tooltip="Refresh from SAP" class="zoaRefreshButton"/>
                                 </Toolbar>
                                 <List
                                     id="requestsList"
@@ -103,25 +113,38 @@
                                     }"
                                     noDataText="No requests found in SAP database"
                                     busyIndicatorDelay="0"
-                                    showSeparators="Inner">
-                                    <CustomListItem>
-                                        <HBox alignItems="Center" justifyContent="SpaceBetween" class="sapUiSmallMargin">
-                                            <VBox>
-                                                <Title text="{Title}" level="H5"/>
-                                                <Label text="{Topic} · {path: 'EventDate', type: 'sap.ui.model.odata.type.Date'} · Authority: {AuthorityRole}" design="Bold"/>
-                                                <Text text="{Description}" visible="{= !!${Description} }"/>
-                                                <Text text="Decision: {DecisionReason}" visible="{= !!${DecisionReason} }" class="sapUiTinyMarginTop"/>
-                                            </VBox>
+                                    showSeparators="None">
+                                    <CustomListItem class="zoaCardItem">
+                                        <HBox alignItems="Center" justifyContent="SpaceBetween" width="100%">
+                                            <HBox alignItems="Center">
+                                                <core:Icon
+                                                    src="{= ${Topic} === 'HOLIDAY' ? 'sap-icon://flight' : (${Topic} === 'EVENT' ? 'sap-icon://theater' : 'sap-icon://map') }"
+                                                    size="1.8rem"
+                                                    color="{= ${Topic} === 'HOLIDAY' ? '#0070F2' : (${Topic} === 'EVENT' ? '#7E22CE' : '#B45309') }"
+                                                    class="sapUiSmallMarginEnd sapUiTinyMarginBegin"/>
+                                                <VBox>
+                                                    <HBox alignItems="Center" class="sapUiTinyMarginBottom">
+                                                        <Title text="{Title}" level="H4" class="sapUiTinyMarginEnd"/>
+                                                        <Text text="{Topic}" class="zoaTopicPill sapUiTinyMarginEnd"/>
+                                                    </HBox>
+                                                    <Label text="Event Date: {path: 'EventDate', type: 'sap.ui.model.odata.type.Date'} · Authority: {AuthorityRole}" design="Standard"/>
+                                                    <Text text="{Description}" visible="{= !!${Description} }" class="sapUiTinyMarginTop"/>
+                                                    <Text text="Decision: {DecisionReason}" visible="{= !!${DecisionReason} }" class="sapUiTinyMarginTop"/>
+                                                </VBox>
+                                            </HBox>
                                             <HBox alignItems="Center">
                                                 <ObjectStatus
                                                     text="{StatusText}"
                                                     state="{= ${Status} === 'C' ? 'Success' : (${Status} === 'N' ? 'Error' : 'Warning') }"
+                                                    icon="{= ${Status} === 'C' ? 'sap-icon://accept' : (${Status} === 'N' ? 'sap-icon://decline' : 'sap-icon://pending') }"
+                                                    inverted="true"
                                                     class="sapUiSmallMarginEnd"/>
                                                 <Button
                                                     icon="sap-icon://delete"
                                                     type="Transparent"
                                                     tooltip="Delete Request"
-                                                    press=".onDeleteRequestPress"/>
+                                                    press=".onDeleteRequestPress"
+                                                    class="zoaDeleteButton"/>
                                             </HBox>
                                         </HBox>
                                     </CustomListItem>
@@ -139,19 +162,17 @@
                         icon="sap-icon://bell"
                         text="{i18n>tabAlerts}">
                         <content>
-                            <VBox class="sapUiSmallMarginBeginEnd sapUiSmallMarginTop">
-
-                                <Toolbar class="sapUiSmallMarginBottom" style="background:transparent;border:none">
-                                    <Title text="{i18n>alertsTitle}" level="H4"/>
+                            <VBox class="sapUiMediumMarginBeginEnd sapUiSmallMarginTop">
+                                <Toolbar class="zoaHeaderToolbar">
+                                    <Title text="{i18n>alertsTitle}" level="H3" class="zoaSectionTitle"/>
                                     <ToolbarSpacer/>
-                                    <Button icon="sap-icon://refresh" type="Transparent" press=".onRefreshPress" tooltip="Refresh Alerts from SAP"/>
+                                    <Button icon="sap-icon://refresh" type="Transparent" press=".onRefreshPress" tooltip="Refresh Alerts from SAP" class="zoaRefreshButton"/>
                                     <ObjectStatus
                                         text="{shellModel>/alertCount} Alerts"
                                         state="Warning"
                                         icon="sap-icon://bell"
                                         visible="{= !!${shellModel>/alertCount} }"/>
                                 </Toolbar>
-
                                 <List
                                     id="alertsList"
                                     items="{
@@ -161,79 +182,97 @@
                                     noDataText="{i18n>alertsEmptyTitle}"
                                     busyIndicatorDelay="0"
                                     updateFinished=".onAlertsLoaded"
-                                    showSeparators="Inner">
-                                    <NotificationListItem
-                                        title="{AlertText}"
-                                        datetime="{path: 'AlertDate', type: 'sap.ui.model.odata.type.Date'}"
-                                        priority="Medium"
-                                        showCloseButton="true"
-                                        close=".onAlertClose"
-                                        authorName="System"
-                                        authorInitials="SY"
-                                        authorAvatarColor="Accent6"/>
+                                    showSeparators="None">
+                                    <CustomListItem class="zoaCardItem">
+                                        <HBox alignItems="Center" justifyContent="SpaceBetween" width="100%">
+                                            <HBox alignItems="Center">
+                                                <core:Icon
+                                                    src="sap-icon://alert"
+                                                    size="1.5rem"
+                                                    color="#D97706"
+                                                    class="sapUiSmallMarginEnd sapUiTinyMarginBegin"/>
+                                                <VBox>
+                                                    <Text text="{AlertText}" class="sapUiTinyMarginBottom" design="Bold"/>
+                                                    <Text text="System Alert · {path: 'AlertDate', type: 'sap.ui.model.odata.type.Date'}"/>
+                                                </VBox>
+                                            </HBox>
+                                            <Button
+                                                icon="sap-icon://decline"
+                                                type="Transparent"
+                                                press=".onAlertClose"
+                                                tooltip="Dismiss"/>
+                                        </HBox>
+                                    </CustomListItem>
                                 </List>
-
                             </VBox>
                         </content>
                     </IconTabFilter>
 
                     <!-- ═══════════════════════════════
-                         ASK
+                         ASK AI (CHAT INTERFACE)
                     ═══════════════════════════════ -->
                     <IconTabFilter
                         key="ask"
                         icon="sap-icon://discussion"
                         text="{i18n>tabAsk}">
                         <content>
-                            <VBox class="sapUiSmallMarginBeginEnd sapUiSmallMarginTop">
-
+                            <VBox class="zoaChatContainer sapUiMediumMarginTop">
                                 <!-- Suggestion Chips -->
-                                <HBox wrap="Wrap" class="sapUiTinyMarginBottom">
-                                    <Button text="Upcoming holidays?" type="Transparent" press=".onChipPress" class="sapUiTinyMarginEnd sapUiTinyMarginBottom"/>
-                                    <Button text="Annual function date &amp; status?" type="Transparent" press=".onChipPress" class="sapUiTinyMarginEnd sapUiTinyMarginBottom"/>
-                                    <Button text="Minimum attendance rule?" type="Transparent" press=".onChipPress" class="sapUiTinyMarginEnd sapUiTinyMarginBottom"/>
-                                    <Button text="Status of Class Trip?" type="Transparent" press=".onChipPress" class="sapUiTinyMarginEnd sapUiTinyMarginBottom"/>
+                                <HBox wrap="Wrap" class="sapUiSmallMarginBottom">
+                                    <Button text="Upcoming holidays?" type="Transparent" press=".onChipPress" class="zoaChipButton"/>
+                                    <Button text="Annual function date &amp; status?" type="Transparent" press=".onChipPress" class="zoaChipButton"/>
+                                    <Button text="Minimum attendance rule?" type="Transparent" press=".onChipPress" class="zoaChipButton"/>
+                                    <Button text="Status of Class Trip?" type="Transparent" press=".onChipPress" class="zoaChipButton"/>
+                                    <Button text="Clear Chat" icon="sap-icon://clear-all" type="Transparent" press=".onClearChat" class="zoaChipButton"/>
                                 </HBox>
 
-                                <!-- Chat feed -->
+                                <!-- Chat Feed -->
                                 <List
                                     id="chatList"
                                     items="{chat>/messages}"
                                     showNoData="false"
                                     showSeparators="None"
                                     class="sapUiTinyMarginBottom">
-                                    <FeedListItem
-                                        sender="{chat>sender}"
-                                        text="{chat>text}"
-                                        timestamp="{chat>time}"
-                                        showIcon="true"
-                                        iconInitials="{chat>initials}"
-                                        iconDensityAware="false"
-                                        senderActive="false"/>
+                                    <CustomListItem class="zoaChatMessageItem">
+                                        <!-- User Message Bubble -->
+                                        <VBox visible="{= ${chat>sender} === 'You' }" class="zoaUserBubble">
+                                            <Text text="{chat>text}" class="zoaUserBubbleText"/>
+                                            <Text text="{chat>time}" class="zoaUserTime"/>
+                                        </VBox>
+                                        <!-- AI Assistant Message Bubble -->
+                                        <VBox visible="{= ${chat>sender} !== 'You' }" class="zoaBotBubble">
+                                            <HBox class="zoaBotHeader">
+                                                <core:Icon src="sap-icon://da" size="1.1rem" color="#0070F2"/>
+                                                <Text text="One Answer AI" class="zoaBotName"/>
+                                                <Text text="· {chat>time}" class="zoaBotTime"/>
+                                            </HBox>
+                                            <FormattedText htmlText="{path: 'chat>text', formatter: '.formatAiResponse'}" class="zoaBotBubbleText"/>
+                                        </VBox>
+                                    </CustomListItem>
                                 </List>
 
-                                <!-- Busy -->
-                                <FlexBox justifyContent="Center" visible="{chat>/busy}" class="sapUiTinyMarginBottom">
-                                    <items><BusyIndicator/></items>
+                                <!-- Busy Indicator -->
+                                <FlexBox justifyContent="Center" visible="{chat>/busy}" class="sapUiMediumMargin">
+                                    <BusyIndicator text="One Answer AI is checking live SAP database..."/>
                                 </FlexBox>
 
-                                <!-- Input bar -->
-                                <Toolbar width="100%">
+                                <!-- Input Bar -->
+                                <HBox alignItems="Center" class="zoaInputBar sapUiSmallMarginTop">
                                     <Input
                                         id="askInput"
-                                        placeholder="{i18n>askInputPlaceholder}"
+                                        placeholder="Type your question about holidays, events, or authority decisions..."
                                         submit=".onAskSend"
                                         enabled="{= !${chat>/busy} }"
-                                        width="100%"/>
+                                        width="100%"
+                                        class="zoaChatInput"/>
                                     <ToolbarSpacer width="0.5rem"/>
                                     <Button
                                         icon="sap-icon://paper-plane"
-                                        type="Emphasized"
                                         press=".onAskSend"
                                         enabled="{= !${chat>/busy} }"
-                                        tooltip="Send"/>
-                                </Toolbar>
-
+                                        tooltip="Send Message"
+                                        class="zoaSendButton"/>
+                                </HBox>
                             </VBox>
                         </content>
                     </IconTabFilter>

@@ -1,13 +1,350 @@
-/* Ensure standalone view fills full viewport */
-.sapUiView { height: 100% !important; }
+/* ══════════════════════════════════════════════════════════════════
+   ONE ANSWER – MODERN FIORI HORIZON STYLING
+   ══════════════════════════════════════════════════════════════════ */
 
-/* Ask tab: chat bubble alignment */
-.zoaAskUserBubble {
-    align-self: flex-end;
-    max-width: 75%;
+/* Global Layout */
+.sapUiView {
+    height: 100% !important;
 }
 
-.zoaAskBotBubble {
-    align-self: flex-start;
-    max-width: 75%;
+body, .sapUiBody {
+    background-color: #F5F7FA !important;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;
+}
+
+/* Page Background */
+.zoaPageContainer {
+    background: linear-gradient(180deg, #F8FAFC 0%, #EEF2F6 100%) !important;
+}
+
+/* Modern ShellBar */
+.zoaShellBar {
+    background: #FFFFFF !important;
+    border-bottom: 1px solid #E2E8F0 !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05) !important;
+}
+
+/* Tab Bar Styling */
+.zoaTabBar .sapMITBHead {
+    background: #FFFFFF !important;
+    border-bottom: 2px solid #E2E8F0 !important;
+    padding: 0 1.5rem !important;
+}
+
+.zoaTabBar .sapMITBItem {
+    padding: 0.75rem 1.25rem !important;
+    margin-right: 0.5rem !important;
+    border-radius: 8px 8px 0 0 !important;
+    transition: all 0.2s ease !important;
+}
+
+.zoaTabBar .sapMITBItem.sapMITBSelected {
+    border-bottom: 3px solid #0070F2 !important;
+}
+
+.zoaTabBar .sapMITBText {
+    font-weight: 600 !important;
+    font-size: 0.95rem !important;
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   CARDS & LIST ITEMS
+   ══════════════════════════════════════════════════════════════════ */
+
+.zoaCardItem {
+    background: #FFFFFF !important;
+    border: 1px solid #E2E8F0 !important;
+    border-radius: 12px !important;
+    margin-bottom: 0.85rem !important;
+    padding: 1rem 1.25rem !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.02) !important;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+.zoaCardItem:hover {
+    transform: translateY(-2px) !important;
+    box-shadow: 0 6px 16px rgba(0, 112, 242, 0.08), 0 2px 6px rgba(0, 0, 0, 0.04) !important;
+    border-color: #B9D5FF !important;
+}
+
+/* Remove default list borders */
+.sapMListShowSeparatorsNone .sapMLIB,
+.sapMListShowSeparatorsInner .sapMLIB {
+    border: none !important;
+    background: transparent !important;
+    padding: 0 !important;
+}
+
+/* Date Calendar Box */
+.zoaDateBox {
+    background: linear-gradient(135deg, #0070F2 0%, #0056B3 100%) !important;
+    color: #FFFFFF !important;
+    border-radius: 10px !important;
+    width: 60px !important;
+    height: 60px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    box-shadow: 0 4px 10px rgba(0, 112, 242, 0.25) !important;
+    margin-right: 1.25rem !important;
+    flex-shrink: 0 !important;
+}
+
+.zoaDateMonth {
+    font-size: 0.7rem !important;
+    font-weight: 800 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 1px !important;
+    line-height: 1 !important;
+    opacity: 0.9 !important;
+}
+
+.zoaDateDay {
+    font-size: 1.35rem !important;
+    font-weight: 800 !important;
+    line-height: 1.1 !important;
+}
+
+/* Topic Pills */
+.zoaTopicPill {
+    font-size: 0.72rem !important;
+    font-weight: 700 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.5px !important;
+    padding: 3px 8px !important;
+    border-radius: 6px !important;
+    display: inline-block !important;
+}
+
+.zoaTopicHoliday {
+    background: #EBF5FF !important;
+    color: #0070F2 !important;
+    border: 1px solid #B9D5FF !important;
+}
+
+.zoaTopicEvent {
+    background: #F3E8FF !important;
+    color: #7E22CE !important;
+    border: 1px solid #D8B4FE !important;
+}
+
+.zoaTopicTrip {
+    background: #FEF3C7 !important;
+    color: #B45309 !important;
+    border: 1px solid #FCD34D !important;
+}
+
+/* Status Badges */
+.zoaStatusBadge {
+    padding: 5px 12px !important;
+    border-radius: 20px !important;
+    font-size: 0.8rem !important;
+    font-weight: 600 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 4px !important;
+}
+
+.zoaStatusConfirmed {
+    background: #E6F9F0 !important;
+    color: #0E7042 !important;
+    border: 1px solid #A3E7C3 !important;
+}
+
+.zoaStatusPending {
+    background: #FFF8E6 !important;
+    color: #B25E00 !important;
+    border: 1px solid #FFD980 !important;
+}
+
+.zoaStatusRejected {
+    background: #FDF0F0 !important;
+    color: #B81D13 !important;
+    border: 1px solid #F8B4B4 !important;
+}
+
+/* Section Header Toolbar */
+.zoaHeaderToolbar {
+    background: transparent !important;
+    border: none !important;
+    padding: 0 0.25rem 0.75rem 0.25rem !important;
+}
+
+.zoaSectionTitle {
+    font-size: 1.15rem !important;
+    font-weight: 700 !important;
+    color: #1E293B !important;
+    letter-spacing: -0.3px !important;
+}
+
+/* Action Buttons */
+.zoaPrimaryButton {
+    background: linear-gradient(135deg, #0070F2 0%, #0056B3 100%) !important;
+    border: none !important;
+    border-radius: 8px !important;
+    color: #FFFFFF !important;
+    font-weight: 600 !important;
+    box-shadow: 0 2px 6px rgba(0, 112, 242, 0.3) !important;
+    transition: all 0.2s ease !important;
+}
+
+.zoaPrimaryButton:hover {
+    box-shadow: 0 4px 12px rgba(0, 112, 242, 0.45) !important;
+    transform: translateY(-1px) !important;
+}
+
+.zoaDeleteButton {
+    color: #EF4444 !important;
+    border-radius: 8px !important;
+    transition: background 0.15s ease !important;
+}
+
+.zoaDeleteButton:hover {
+    background: #FEE2E2 !important;
+    color: #B91C1C !important;
+}
+
+.zoaRefreshButton {
+    border-radius: 8px !important;
+    transition: all 0.2s ease !important;
+}
+
+.zoaRefreshButton:hover {
+    background: #E2E8F0 !important;
+    color: #0070F2 !important;
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   MODERN ASK AI CHAT STYLES
+   ══════════════════════════════════════════════════════════════════ */
+
+.zoaChatContainer {
+    max-width: 900px !important;
+    margin: 0 auto !important;
+    width: 100% !important;
+}
+
+/* Chips Bar */
+.zoaChipButton {
+    background: #FFFFFF !important;
+    border: 1px solid #CBD5E1 !important;
+    color: #334155 !important;
+    border-radius: 20px !important;
+    font-size: 0.85rem !important;
+    font-weight: 500 !important;
+    padding: 0 14px !important;
+    margin-right: 8px !important;
+    margin-bottom: 8px !important;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03) !important;
+    transition: all 0.2s ease !important;
+}
+
+.zoaChipButton:hover {
+    background: #EFF6FF !important;
+    border-color: #0070F2 !important;
+    color: #0070F2 !important;
+    transform: translateY(-1px) !important;
+}
+
+/* Chat Message Card */
+.zoaChatMessageItem {
+    padding: 0.5rem 0 !important;
+    border: none !important;
+    background: transparent !important;
+}
+
+/* User Message Bubble */
+.zoaUserBubble {
+    background: linear-gradient(135deg, #0070F2 0%, #0056B3 100%) !important;
+    color: #FFFFFF !important;
+    border-radius: 16px 16px 2px 16px !important;
+    padding: 12px 18px !important;
+    max-width: 75% !important;
+    margin-left: auto !important;
+    box-shadow: 0 2px 8px rgba(0, 112, 242, 0.25) !important;
+}
+
+.zoaUserBubbleText {
+    color: #FFFFFF !important;
+    font-size: 0.95rem !important;
+    line-height: 1.4 !important;
+}
+
+.zoaUserTime {
+    font-size: 0.7rem !important;
+    color: rgba(255, 255, 255, 0.75) !important;
+    margin-top: 4px !important;
+    text-align: right !important;
+}
+
+/* AI Message Bubble */
+.zoaBotBubble {
+    background: #FFFFFF !important;
+    border: 1px solid #E2E8F0 !important;
+    border-radius: 16px 16px 16px 2px !important;
+    padding: 16px 20px !important;
+    max-width: 85% !important;
+    margin-right: auto !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04) !important;
+}
+
+.zoaBotBubbleText {
+    color: #1E293B !important;
+    font-size: 0.95rem !important;
+    line-height: 1.55 !important;
+    white-space: normal !important;
+}
+
+.zoaBotHeader {
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+    margin-bottom: 8px !important;
+}
+
+.zoaBotName {
+    font-weight: 700 !important;
+    font-size: 0.85rem !important;
+    color: #0070F2 !important;
+}
+
+.zoaBotTime {
+    font-size: 0.7rem !important;
+    color: #94A3B8 !important;
+}
+
+/* Chat Input Bar */
+.zoaInputBar {
+    background: #FFFFFF !important;
+    border: 1px solid #CBD5E1 !important;
+    border-radius: 14px !important;
+    padding: 6px 10px !important;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.06) !important;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease !important;
+}
+
+.zoaInputBar:focus-within {
+    border-color: #0070F2 !important;
+    box-shadow: 0 4px 18px rgba(0, 112, 242, 0.15) !important;
+}
+
+.zoaChatInput input {
+    border: none !important;
+    background: transparent !important;
+    font-size: 0.95rem !important;
+}
+
+.zoaSendButton {
+    background: linear-gradient(135deg, #0070F2 0%, #0056B3 100%) !important;
+    color: #FFFFFF !important;
+    border-radius: 10px !important;
+    border: none !important;
+    width: 38px !important;
+    height: 38px !important;
+    box-shadow: 0 2px 6px rgba(0, 112, 242, 0.3) !important;
+}
+
+.zoaSendButton:hover {
+    transform: scale(1.05) !important;
 }

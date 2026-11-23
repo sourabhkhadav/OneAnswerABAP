@@ -566,6 +566,17 @@ sap.ui.define([
                 "7. If a date has already passed: 'This date has already passed and no decision was recorded.'\n" +
                 "8. If an event/request is not in the live database: State that no record was found in the database and advise checking with the department.\n" +
                 sDatabaseNotice + "\n\n" +
+                "=== SEQUENCE & FORMATTING INSTRUCTIONS (STRICT) ===\n" +
+                "- Structure your answer in a clean, professional, readable sequence.\n" +
+                "- When listing events, holidays, or requests, NEVER put them together in one continuous paragraph.\n" +
+                "- List each event/holiday as a distinct numbered item (1., 2., 3., etc.).\n" +
+                "- For each item, put its properties on separate lines with clean bullets:\n" +
+                "  1. [Event/Holiday Title]\n" +
+                "     - Date: [Event Date]\n" +
+                "     - Status: [Confirmed / Pending / Not happening]\n" +
+                "     - Reason: [Decision Reason]\n" +
+                "     - Decided by: [Authority]\n" +
+                "- Add a blank line between each item so they are neatly separated.\n\n" +
                 "=== LIVE DATABASE STATE (REAL DATA) ===\n" +
                 JSON.stringify(oDatabaseData, null, 2) + "\n\n" +
                 "IMPORTANT: Always respond in clear, professional English. Be direct, helpful, and concise.";
@@ -597,6 +608,91 @@ sap.ui.define([
                     return "Sorry, I could not generate an answer at this time.";
                 }
             });
+        },
+
+        formatDateMonth: function (sDate) {
+            if (!sDate) { return ""; }
+            var oDate = new Date(sDate);
+            if (isNaN(oDate.getTime())) { return ""; }
+            var aMonths = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
+            return aMonths[oDate.getMonth()];
+        },
+
+        formatDateDay: function (sDate) {
+            if (!sDate) { return ""; }
+            var oDate = new Date(sDate);
+            if (isNaN(oDate.getTime())) { return ""; }
+            return String(oDate.getDate());
+        },
+
+        formatAiResponse: function (sText) {
+            if (!sText) { return ""; }
+
+            var s = sText.replace(/\s*\.\.\.\s*(MORE|LESS)/gi, "");
+
+            // 1. Separate notes first so they don't get treated as bullets
+            s = s.replace(/\s*\*?(Note:?\s*)/gi, "\n\nNote: ");
+
+            // 2. Separate inline numbered sequences: e.g. "holidays: 1. " or "...yyyy 2. "
+            s = s.replace(/([^\n])\s+(\d+[\.\)]\s+)/g, "$1\n\n$2");
+
+            // 3. Separate bullet/property items: " * **Date:**" or " * **Status:**" etc.
+            s = s.replace(/(?:^|\s+)[\*\-•]\s*(\*\*[a-zA-Z\s]+:?\*\*)/g, "\n   - $1");
+
+            // 4. Markdown headers
+            s = s.replace(/^### (.*$)/gim, "<h4>$1</h4>");
+            s = s.replace(/^## (.*$)/gim, "<h3>$1</h3>");
+
+            // 5. Markdown bold and italic
+            s = s.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
+            s = s.replace(/(^|[^\*])\*([^\*]+)\*([^\*]|$)/g, "$1<em>$2</em>$3");
+
+            var aLines = s.split("\n");
+            var aProcessed = [];
+
+            for (var i = 0; i < aLines.length; i++) {
+                var sLine = aLines[i].trim();
+                if (!sLine) {
+                    continue;
+                }
+
+                // Note block
+                if (/^Note:/i.test(sLine)) {
+                    aProcessed.push(
+                        "<p style=\"background:#F8FAFC; border:1px dashed #CBD5E1; padding:8px 12px; margin:12px 0 4px 0; border-radius:6px; color:#475569; font-size:0.9rem;\">" +
+                        "<strong style=\"color:#0070F2;\">ℹ️ Note: </strong>" + sLine.replace(/^Note:\s*/i, "") +
+                        "</p>"
+                    );
+                    continue;
+                }
+
+                // Numbered sequence card: "1. Holiday on 24 Nov"
+                var numMatch = sLine.match(/^(\d+[\.\)])\s*(.*)/);
+                if (numMatch) {
+                    aProcessed.push(
+                        "<p style=\"background:#EFF6FF; border-left:4px solid #0070F2; padding:6px 12px; margin:10px 0 4px 0; border-radius:0 6px 6px 0; font-weight:bold; color:#0070F2;\">" +
+                        numMatch[1] + " " + numMatch[2] +
+                        "</p>"
+                    );
+                    continue;
+                }
+
+                // Bullet point: "- Date: ..."
+                var bulletMatch = sLine.match(/^[\*\-•]\s*(.*)/);
+                if (bulletMatch) {
+                    aProcessed.push(
+                        "<p style=\"margin:2px 0 2px 16px; line-height:1.45; color:#334155;\">" +
+                        "<span style=\"color:#0070F2; font-weight:bold; margin-right:8px;\">•</span>" + bulletMatch[1] +
+                        "</p>"
+                    );
+                    continue;
+                }
+
+                // Regular line
+                aProcessed.push("<p style=\"margin:6px 0 4px 0; line-height:1.5; color:#1E293B;\">" + sLine + "</p>");
+            }
+
+            return aProcessed.join("");
         },
 
         _now: function () {
