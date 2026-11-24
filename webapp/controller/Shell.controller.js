@@ -41,7 +41,7 @@ sap.ui.define([
     // ─────────────────────────────────────────────────────────────
     var ENTITY_SETS = {
         request: "Request",          // Main RAP entity: Create, Update, Delete, Actions
-        event: "Event",              // Confirmed Events/Holidays (or 'EventsHolidays' depending on CDS publication)
+        event: "EventsHolidays",
         alert: "Alert",              // Student Alerts/Notifications
         authority: "Authority"       // Approval authority mapping
     };
@@ -525,9 +525,11 @@ sap.ui.define([
             // Step 1: Fetch LIVE database state via ODataModel V4 (NO dummy data)
             this._getLiveContext().then(function (oDatabaseData) {
                 // Step 2: Call Groq AI with real database state
-                return this._callGroqAIWithDatabase(sQuestion, oDatabaseData);
-            }.bind(this)).then(function (sAnswer) {
-                this._appendAnswer(sAnswer);
+                return this._callGroqAIWithDatabase(sQuestion, oDatabaseData).then(function (sAnswer) {
+                    this._appendAnswer(sAnswer);
+                }.bind(this), function (err) {
+                    this._appendAnswer("Error communicating with Groq AI: " + this._formatError(err));
+                }.bind(this));
             }.bind(this)).catch(function (err) {
                 var sErrorFormatted = this._formatError(err);
                 this._appendAnswer("Error communicating with SAP backend: " + sErrorFormatted);
@@ -543,6 +545,10 @@ sap.ui.define([
         },
 
         _callGroqAIWithDatabase: function (sQuestion, oDatabaseData) {
+            if (!GROQ_API_KEY || GROQ_API_KEY === "YOUR_GROQ_API_KEY_HERE") {
+                return Promise.reject(new Error("Groq API key is not configured. Set GROQ_API_KEY in webapp/config.js."));
+            }
+
             var sDatabaseNotice = "";
             if (oDatabaseData.connection_errors) {
                 sDatabaseNotice = "\nWARNING: There were errors connecting to some SAP backend entities: " +

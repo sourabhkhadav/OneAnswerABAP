@@ -1,1 +1,16 @@
-[]
+[
+  {
+    "EventId": "550e8400-e29b-41d4-a716-446655440020",
+    "Title": "Winter Break",
+    "Topic": "HOLIDAY",
+    "EventDate": "2026-12-25",
+    "Reason": "Sample mock holiday."
+  },
+  {
+    "EventId": "550e8400-e29b-41d4-a716-446655440021",
+    "Title": "Annual Function",
+    "Topic": "EVENT",
+    "EventDate": "2026-12-18",
+    "Reason": "Sample mock event."
+  }
+]

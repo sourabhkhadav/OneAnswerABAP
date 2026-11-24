@@ -1,1 +1,20 @@
-[]
+[
+  {
+    "Topic": "HOLIDAY",
+    "TopicText": "Holiday",
+    "AuthorityRole": "DIRECTOR",
+    "DecideDays": "7"
+  },
+  {
+    "Topic": "EVENT",
+    "TopicText": "Event",
+    "AuthorityRole": "HOD",
+    "DecideDays": "7"
+  },
+  {
+    "Topic": "TRIP",
+    "TopicText": "Trip",
+    "AuthorityRole": "TEACHER",
+    "DecideDays": "7"
+  }
+]

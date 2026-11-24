@@ -1,1 +1,38 @@
-[]
+[
+  {
+    "RequestUuid": "550e8400-e29b-41d4-a716-446655440001",
+    "Topic": "EVENT",
+    "Title": "Annual Function",
+    "EventDate": "2026-12-18",
+    "Description": "Sample request for the student mock app.",
+    "Status": "C",
+    "StatusText": "Confirmed",
+    "StatusCriticality": 3,
+    "AuthorityRole": "HOD",
+    "DecideBy": "2026-12-11",
+    "DecisionReason": "Approved in mock data.",
+    "CreatedBy": "STUDENT1",
+    "LastChangedBy": "ADMIN",
+    "HasDraftEntity": false,
+    "HasActiveEntity": false,
+    "IsActiveEntity": true
+  },
+  {
+    "RequestUuid": "550e8400-e29b-41d4-a716-446655440002",
+    "Topic": "TRIP",
+    "Title": "Campus Trip",
+    "EventDate": "2026-12-06",
+    "Description": "Sample pending request for the student mock app.",
+    "Status": "P",
+    "StatusText": "Pending",
+    "StatusCriticality": 2,
+    "AuthorityRole": "TEACHER",
+    "DecideBy": "2026-11-29",
+    "DecisionReason": "",
+    "CreatedBy": "STUDENT1",
+    "LastChangedBy": "STUDENT1",
+    "HasDraftEntity": false,
+    "HasActiveEntity": false,
+    "IsActiveEntity": true
+  }
+]

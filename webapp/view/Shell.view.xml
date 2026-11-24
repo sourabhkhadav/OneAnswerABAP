@@ -13,10 +13,9 @@
             <f:ShellBar
                 id="shellBar"
                 title="{i18n>shellTitle}"
-                primaryTitle="{i18n>shellTitle}"
                 showNotifications="true"
                 notificationsNumber="{shellModel>/alertCount}"
-                notificationsPress=".onNotificationsPress"
+                notificationsPressed=".onNotificationsPress"
                 class="zoaShellBar"/>
         </customHeader>
 
@@ -192,7 +191,7 @@
                                                     color="#D97706"
                                                     class="sapUiSmallMarginEnd sapUiTinyMarginBegin"/>
                                                 <VBox>
-                                                    <Text text="{AlertText}" class="sapUiTinyMarginBottom" design="Bold"/>
+                                                    <Title text="{AlertText}" level="H5" class="sapUiTinyMarginBottom"/>
                                                     <Text text="System Alert · {path: 'AlertDate', type: 'sap.ui.model.odata.type.Date'}"/>
                                                 </VBox>
                                             </HBox>

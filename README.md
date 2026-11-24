@@ -35,6 +35,8 @@ An SAP Fiori application.
     npm run start-mock
 ```
 
+`npm start` and `npm run start-local` use the configured SAP backend. Use `npm run start-mock` only when you want local sample data; it includes demo records such as "Annual Function".
+
 #### Pre-requisites:
 
 1. Active NodeJS LTS (Long Term Support) version and associated supported NPM version.  (See https://nodejs.org)

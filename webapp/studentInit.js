@@ -13,7 +13,9 @@ sap.ui.define([
     });
 
     var oI18nModel = new ResourceModel({
-        bundleName: "zoa.zoarequestui.i18n.i18n"
+        bundleName: "zoa.zoarequestui.i18n.i18n",
+        supportedLocales: ["en"],
+        fallbackLocale: "en"
     });
 
     var oODataModel = new ODataModel({
