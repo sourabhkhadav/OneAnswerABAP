@@ -524,6 +524,18 @@ sap.ui.define([
 
             // Step 1: Fetch LIVE database state via ODataModel V4 (NO dummy data)
             this._getLiveContext().then(function (oDatabaseData) {
+                if (oDatabaseData.connection_errors && oDatabaseData.connection_errors.requests) {
+                    this._appendAnswer("Could not retrieve live request records from SAP: " +
+                        oDatabaseData.connection_errors.requests);
+                    return;
+                }
+
+                var sLiveHolidayAnswer = this._getLiveHolidayAnswer(sQuestion, oDatabaseData);
+                if (sLiveHolidayAnswer !== null) {
+                    this._appendAnswer(sLiveHolidayAnswer);
+                    return;
+                }
+
                 // Step 2: Call Groq AI with real database state
                 return this._callGroqAIWithDatabase(sQuestion, oDatabaseData).then(function (sAnswer) {
                     this._appendAnswer(sAnswer);
@@ -534,6 +546,82 @@ sap.ui.define([
                 var sErrorFormatted = this._formatError(err);
                 this._appendAnswer("Error communicating with SAP backend: " + sErrorFormatted);
             }.bind(this));
+        },
+
+        _getLiveHolidayAnswer: function (sQuestion, oDatabaseData) {
+            if (!/\bholidays?\b|chhutti|chutti|avakash/i.test(sQuestion)) {
+                return null;
+            }
+
+            if (oDatabaseData.connection_errors && oDatabaseData.connection_errors.requests) {
+                return "I could not retrieve holiday requests from the live SAP backend: " +
+                    oDatabaseData.connection_errors.requests;
+            }
+
+            var oToday = new Date();
+            var iTodayMonth = oToday.getMonth() + 1;
+            var sToday = oToday.getFullYear() + "-" +
+                (iTodayMonth < 10 ? "0" : "") + iTodayMonth + "-" +
+                (oToday.getDate() < 10 ? "0" : "") + oToday.getDate();
+            var aMonths = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+            var aUpcomingHolidays = (oDatabaseData.live_requests || []).filter(function (oRequest) {
+                var sTopic = String(oRequest.topic || "").toUpperCase();
+                var sStatus = String(oRequest.status || "").toUpperCase();
+                var sStatusText = String(oRequest.status_text || "").toUpperCase();
+                return sTopic === "HOLIDAY" &&
+                    (sStatus === "C" || sStatusText === "CONFIRMED");
+            }).map(function (oRequest) {
+                var sDate = "";
+                if (oRequest.event_date instanceof Date) {
+                    var oEventDate = oRequest.event_date;
+                    var iEventMonth = oEventDate.getMonth() + 1;
+                    sDate = oEventDate.getFullYear() + "-" +
+                        (iEventMonth < 10 ? "0" : "") + iEventMonth + "-" +
+                        (oEventDate.getDate() < 10 ? "0" : "") + oEventDate.getDate();
+                } else {
+                    sDate = String(oRequest.event_date || "");
+                }
+                var aDateParts = sDate.match(/^(\d{4})-(\d{2})-(\d{2})/);
+                if (!aDateParts) {
+                    return null;
+                }
+                var iMonth = parseInt(aDateParts[2], 10);
+                if (iMonth < 1 || iMonth > 12) {
+                    return null;
+                }
+                return {
+                    request: oRequest,
+                    date: aDateParts[0],
+                    displayDate: parseInt(aDateParts[3], 10) + " " +
+                        aMonths[iMonth - 1] + " " + aDateParts[1]
+                };
+            }).filter(function (oHoliday) {
+                return oHoliday && oHoliday.date >= sToday;
+            }).sort(function (oHolidayA, oHolidayB) {
+                return oHolidayA.date.localeCompare(oHolidayB.date);
+            });
+
+            if (aUpcomingHolidays.length === 0) {
+                return "No confirmed upcoming holidays were found in the live SAP request records.";
+            }
+
+            var aAnswer = ["Confirmed upcoming holidays from live SAP data:"];
+            aUpcomingHolidays.forEach(function (oHoliday, iIndex) {
+                var oRequest = oHoliday.request;
+                aAnswer.push(
+                    "",
+                    (iIndex + 1) + ". " + (oRequest.title || "Holiday"),
+                    "- Date: " + oHoliday.displayDate,
+                    "- Status: " + (oRequest.status_text || "Confirmed")
+                );
+                if (oRequest.decision_reason) {
+                    aAnswer.push("- Reason: " + oRequest.decision_reason);
+                }
+                if (oRequest.authority_role) {
+                    aAnswer.push("- Decided by: " + oRequest.authority_role);
+                }
+            });
+            return aAnswer.join("\n");
         },
 
         _appendAnswer: function (sText) {
@@ -550,18 +638,23 @@ sap.ui.define([
             }
 
             var sDatabaseNotice = "";
-            if (oDatabaseData.connection_errors) {
-                sDatabaseNotice = "\nWARNING: There were errors connecting to some SAP backend entities: " +
-                    JSON.stringify(oDatabaseData.connection_errors) +
-                    "\nPlease inform the user clearly if information cannot be retrieved due to backend authorization/connection issues.";
-            } else if (oDatabaseData.total_records === 0) {
+            if (!oDatabaseData.connection_errors && oDatabaseData.total_records === 0) {
                 sDatabaseNotice = "\nNOTICE: The SAP database currently contains 0 records. If the user asks about events, holidays, or requests, state politely that no records currently exist in the database and advise checking with the department.";
             }
+            var oAvailableDatabaseData = {
+                database_service: oDatabaseData.database_service,
+                live_requests: oDatabaseData.live_requests,
+                live_alerts: oDatabaseData.live_alerts,
+                live_events: oDatabaseData.live_events,
+                live_authorities: oDatabaseData.live_authorities,
+                total_records: oDatabaseData.total_records
+            };
 
             var sSystemPrompt =
                 "You are the official 'One Answer' Student AI Assistant for the ZOA College Portal.\n" +
                 "You are provided with REAL LIVE DATA fetched directly from the SAP ABAP RAP database tables (ZOA_OA_REQUEST, ZOA_OA_ALERT, ZOA_OA_AUTH).\n" +
                 "Answer student questions accurately and strictly according to this live database state and the ABAP backend rules:\n\n" +
+                "Never add notes about connection errors or unavailable auxiliary entity sets. Never invent a record or field value; only state details present in the provided live records.\n" +
                 "=== BACKEND BUSINESS RULES ===\n" +
                 "1. Status 'C' (Confirmed): The request is approved and officially happening. Provide Title, Event Date, and Decision Reason.\n" +
                 "2. Status 'N' (Not happening): The request was rejected/cancelled by authority. Provide Title, Event Date, and Decision Reason.\n" +
@@ -584,7 +677,7 @@ sap.ui.define([
                 "     - Decided by: [Authority]\n" +
                 "- Add a blank line between each item so they are neatly separated.\n\n" +
                 "=== LIVE DATABASE STATE (REAL DATA) ===\n" +
-                JSON.stringify(oDatabaseData, null, 2) + "\n\n" +
+                JSON.stringify(oAvailableDatabaseData, null, 2) + "\n\n" +
                 "IMPORTANT: Always respond in clear, professional English. Be direct, helpful, and concise.";
 
             return fetch("https://api.groq.com/openai/v1/chat/completions", {
