@@ -12,11 +12,17 @@
         <customHeader>
             <f:ShellBar
                 id="shellBar"
-                title="{i18n>shellTitle}"
+                title="One Answer"
+                secondTitle="{shellModel>/userSubtitle}"
                 showNotifications="true"
                 notificationsNumber="{shellModel>/alertCount}"
                 notificationsPressed=".onNotificationsPress"
-                class="zoaShellBar"/>
+                class="zoaShellBar">
+                <f:additionalContent>
+                    <Button text="Authority App" icon="sap-icon://customer-and-supplier" type="Transparent" press=".onSwitchToAuthority" tooltip="Open Teacher / HOD Approval Portal"/>
+                    <Button text="Logout" icon="sap-icon://log-out" type="Transparent" press=".onLogoutPress" tooltip="Logout to Switch Role"/>
+                </f:additionalContent>
+            </f:ShellBar>
         </customHeader>
 
         <content>

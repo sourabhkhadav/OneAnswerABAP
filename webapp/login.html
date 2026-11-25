@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>One Answer – ZOA College Portal Login</title>
+    <link rel="icon" href="data:,">
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: linear-gradient(135deg, #0F172A 0%, #1E293B 50%, #0F172A 100%);
+            color: #1E293B;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1.5rem;
+        }
+
+        .login-wrapper {
+            width: 100%;
+            max-width: 980px;
+            background: #FFFFFF;
+            border-radius: 20px;
+            box-shadow: 0 20px 45px rgba(0, 0, 0, 0.35);
+            overflow: hidden;
+            display: grid;
+            grid-template-columns: 1fr 1.25fr;
+        }
+
+        @media (max-width: 768px) {
+            .login-wrapper {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Left Side: Brand Banner */
+        .login-sidebar {
+            background: linear-gradient(160deg, #0070F2 0%, #0051B3 60%, #0B192C 100%);
+            color: #FFFFFF;
+            padding: 3rem 2.5rem;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .login-sidebar::after {
+            content: "";
+            position: absolute;
+            top: -60px;
+            right: -60px;
+            width: 220px;
+            height: 220px;
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.18) 0%, transparent 70%);
+            border-radius: 50%;
+        }
+
+        .brand-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(255, 255, 255, 0.16);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            width: fit-content;
+        }
+
+        .brand-title {
+            font-size: 2.2rem;
+            font-weight: 800;
+            line-height: 1.15;
+            margin-top: 1.5rem;
+            letter-spacing: -0.5px;
+        }
+
+        .brand-subtitle {
+            font-size: 0.95rem;
+            opacity: 0.88;
+            margin-top: 0.75rem;
+            line-height: 1.5;
+        }
+
+        .brand-features {
+            margin-top: 2rem;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .feature-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 0.85rem;
+            opacity: 0.92;
+        }
+
+        .feature-icon {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75rem;
+        }
+
+        .brand-footer {
+            margin-top: 2rem;
+            font-size: 0.75rem;
+            opacity: 0.7;
+        }
+
+        /* Right Side: Form & Personas */
+        .login-main {
+            padding: 2.5rem 2.75rem;
+            background: #FAFAFA;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .login-header h2 {
+            font-size: 1.6rem;
+            font-weight: 700;
+            color: #0F172A;
+            letter-spacing: -0.3px;
+        }
+
+        .login-header p {
+            color: #64748B;
+            font-size: 0.9rem;
+            margin-top: 4px;
+        }
+
+        /* Tabs */
+        .tab-nav {
+            display: flex;
+            background: #E2E8F0;
+            border-radius: 10px;
+            padding: 4px;
+            margin: 1.25rem 0 1.5rem 0;
+            gap: 4px;
+        }
+
+        .tab-btn {
+            flex: 1;
+            padding: 8px 12px;
+            border: none;
+            background: transparent;
+            color: #475569;
+            font-weight: 600;
+            font-size: 0.85rem;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .tab-btn.active {
+            background: #FFFFFF;
+            color: #0070F2;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+        }
+
+        /* Form Styles */
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 0.82rem;
+            font-weight: 600;
+            color: #334155;
+            margin-bottom: 6px;
+        }
+
+        .form-input, .form-select {
+            width: 100%;
+            padding: 10px 14px;
+            font-size: 0.92rem;
+            border: 1px solid #CBD5E1;
+            border-radius: 8px;
+            background: #FFFFFF;
+            color: #1E293B;
+            transition: all 0.2s ease;
+            outline: none;
+        }
+
+        .form-input:focus, .form-select:focus {
+            border-color: #0070F2;
+            box-shadow: 0 0 0 3px rgba(0, 112, 242, 0.15);
+        }
+
+        .btn-submit {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(135deg, #0070F2 0%, #0056B3 100%);
+            color: #FFFFFF;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(0, 112, 242, 0.3);
+            transition: all 0.2s ease;
+            margin-top: 0.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn-submit:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 16px rgba(0, 112, 242, 0.4);
+        }
+
+        /* Demo Persona Grid */
+        .personas-container {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .persona-card {
+            background: #FFFFFF;
+            border: 1px solid #E2E8F0;
+            border-radius: 10px;
+            padding: 12px 14px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .persona-card:hover {
+            border-color: #0070F2;
+            transform: translateX(3px);
+            box-shadow: 0 4px 12px rgba(0, 112, 242, 0.1);
+        }
+
+        .persona-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .persona-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+        }
+
+        .avatar-student { background: #EFF6FF; color: #0070F2; }
+        .avatar-teacher { background: #FEF3C7; color: #B45309; }
+        .avatar-hod     { background: #F3E8FF; color: #7E22CE; }
+        .avatar-dir     { background: #DCFCE7; color: #15803D; }
+
+        .persona-title {
+            font-size: 0.9rem;
+            font-weight: 700;
+            color: #0F172A;
+        }
+
+        .persona-desc {
+            font-size: 0.75rem;
+            color: #64748B;
+            margin-top: 2px;
+        }
+
+        .persona-badge {
+            font-size: 0.7rem;
+            font-weight: 700;
+            padding: 2px 8px;
+            border-radius: 6px;
+            text-transform: uppercase;
+        }
+
+        .badge-student { background: #DBEAFE; color: #1E40AF; }
+        .badge-teacher { background: #FEF3C7; color: #92400E; }
+        .badge-hod     { background: #F3E8FF; color: #6B21A8; }
+        .badge-dir     { background: #DCFCE7; color: #166534; }
+
+        .persona-arrow {
+            font-size: 1.1rem;
+            color: #94A3B8;
+            transition: transform 0.2s ease;
+        }
+
+        .persona-card:hover .persona-arrow {
+            color: #0070F2;
+            transform: translateX(4px);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="login-wrapper">
+
+        <!-- Left Brand Banner -->
+        <div class="login-sidebar">
+            <div>
+                <div class="brand-badge">
+                    <span>⚡</span> SAP S/4HANA &amp; AI
+                </div>
+                <h1 class="brand-title">One Answer<br>Portal</h1>
+                <p class="brand-subtitle">
+                    Automated Leave, Event &amp; Trip Request Management with Real-Time ABAP RAP &amp; Groq AI.
+                </p>
+
+                <div class="brand-features">
+                    <div class="feature-item">
+                        <div class="feature-icon">✓</div>
+                        <span>Role-Based Access (Student, Teacher, HOD, Director)</span>
+                    </div>
+                    <div class="feature-item">
+                        <div class="feature-icon">✓</div>
+                        <span>SAP S/4HANA RAP OData V4 Backend</span>
+                    </div>
+                    <div class="feature-item">
+                        <div class="feature-icon">✓</div>
+                        <span>Groq AI Assistant grounded in live database</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="brand-footer">
+                &copy; 2026 ZOA College Portal &middot; S/4HANA Cloud System
+            </div>
+        </div>
+
+        <!-- Right Login & Personas Content -->
+        <div class="login-main">
+            <div class="login-header">
+                <h2>Welcome Back</h2>
+                <p>Choose your role or quick-login to access your portal</p>
+            </div>
+
+            <!-- Tab Switcher -->
+            <div class="tab-nav">
+                <button class="tab-btn active" onclick="switchTab('personas')">⚡ Quick Demo Login</button>
+                <button class="tab-btn" onclick="switchTab('form')">🔑 Custom Sign In</button>
+            </div>
+
+            <!-- Section 1: Quick Demo Personas (1-Click for Presentation) -->
+            <div id="section-personas" class="personas-container">
+                <!-- Student -->
+                <div class="persona-card" onclick="loginPersona('STUDENT', 'STU_2026', 'Student Portal')">
+                    <div class="persona-left">
+                        <div class="persona-avatar avatar-student">🎓</div>
+                        <div>
+                            <div class="persona-title">Student Portal</div>
+                            <div class="persona-desc">Submit requests, view confirmed events, chat with Groq AI</div>
+                        </div>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <span class="persona-badge badge-student">Student</span>
+                        <span class="persona-arrow">&rarr;</span>
+                    </div>
+                </div>
+
+                <!-- Teacher -->
+                <div class="persona-card" onclick="loginPersona('TEACHER', 'S23AH17', 'Teacher / Coordinator')">
+                    <div class="persona-left">
+                        <div class="persona-avatar avatar-teacher">👨‍🏫</div>
+                        <div>
+                            <div class="persona-title">Teacher (S23AH17)</div>
+                            <div class="persona-desc">Review &amp; Approve Class Trip requests</div>
+                        </div>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <span class="persona-badge badge-teacher">Trips</span>
+                        <span class="persona-arrow">&rarr;</span>
+                    </div>
+                </div>
+
+                <!-- HOD -->
+                <div class="persona-card" onclick="loginPersona('HOD', 'S23AH18', 'Head of Department')">
+                    <div class="persona-left">
+                        <div class="persona-avatar avatar-hod">🏛️</div>
+                        <div>
+                            <div class="persona-title">HOD (S23AH18)</div>
+                            <div class="persona-desc">Review &amp; Approve College Event requests</div>
+                        </div>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <span class="persona-badge badge-hod">Events</span>
+                        <span class="persona-arrow">&rarr;</span>
+                    </div>
+                </div>
+
+                <!-- Director -->
+                <div class="persona-card" onclick="loginPersona('DIRECTOR', 'S23AH19', 'College Director')">
+                    <div class="persona-left">
+                        <div class="persona-avatar avatar-dir">🎖️</div>
+                        <div>
+                            <div class="persona-title">Director (S23AH19)</div>
+                            <div class="persona-desc">Review &amp; Approve Official Holiday requests</div>
+                        </div>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <span class="persona-badge badge-dir">Holidays</span>
+                        <span class="persona-arrow">&rarr;</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section 2: Custom Sign In Form -->
+            <form id="section-form" style="display: none;" onsubmit="handleFormLogin(event)">
+                <div class="form-group">
+                    <label class="form-label" for="inpUser">User ID / Roll Number</label>
+                    <input type="text" id="inpUser" class="form-input" placeholder="e.g. S23AH18 or STU_2026 or 101" required value="S23AH18" oninput="onUserInputChange()">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="inpRole">Select Role</label>
+                    <select id="inpRole" class="form-select" onchange="onRoleChange()">
+                        <option value="STUDENT">🎓 Student (Student Portal &amp; AI)</option>
+                        <option value="TEACHER">👨‍🏫 Teacher (Class Trip Approver - S23AH17)</option>
+                        <option value="HOD" selected>🏛️ HOD (Event Approver - S23AH18)</option>
+                        <option value="DIRECTOR">🎖️ Director (Holiday Approver - S23AH19)</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="inpPass">Password</label>
+                    <input type="password" id="inpPass" class="form-input" placeholder="Enter password" value="hana@123" required>
+                </div>
+
+                <button type="submit" class="btn-submit">
+                    <span>Sign In to Portal</span>
+                    <span>&rarr;</span>
+                </button>
+            </form>
+
+        </div>
+
+    </div>
+
+    <script>
+        // Load live authority master data dynamically from SAP backend if connected
+        window.addEventListener('DOMContentLoaded', function () {
+            fetch("/sap/opu/odata4/sap/zoa_ui_oa_request_o4/srvd/sap/zoa_ui_oa_request/0001/Authority")
+                .then(function (res) {
+                    if (res.ok) { return res.json(); }
+                    throw new Error("Backend not reachable or not authenticated");
+                })
+                .then(function (data) {
+                    if (data && data.value && data.value.length > 0) {
+                        console.log("[OneAnswer] Live Authority roles loaded from SAP backend:", data.value);
+                    }
+                })
+                .catch(function (err) {
+                    console.info("[OneAnswer] Using master data role mapping:", err.message);
+                });
+        });
+
+        function switchTab(tab) {
+            const btnPersonas = document.querySelectorAll('.tab-btn')[0];
+            const btnForm = document.querySelectorAll('.tab-btn')[1];
+            const secPersonas = document.getElementById('section-personas');
+            const secForm = document.getElementById('section-form');
+
+            if (tab === 'personas') {
+                btnPersonas.classList.add('active');
+                btnForm.classList.remove('active');
+                secPersonas.style.display = 'flex';
+                secForm.style.display = 'none';
+            } else {
+                btnForm.classList.add('active');
+                btnPersonas.classList.remove('active');
+                secPersonas.style.display = 'none';
+                secForm.style.display = 'block';
+            }
+        }
+
+        function onRoleChange() {
+            const role = document.getElementById('inpRole').value;
+            const inpUser = document.getElementById('inpUser');
+            if (role === 'STUDENT') {
+                inpUser.value = 'STU_2026';
+            } else if (role === 'TEACHER') {
+                inpUser.value = 'S23AH17';
+            } else if (role === 'HOD') {
+                inpUser.value = 'S23AH18';
+            } else if (role === 'DIRECTOR') {
+                inpUser.value = 'S23AH19';
+            }
+        }
+
+        function onUserInputChange() {
+            const val = document.getElementById('inpUser').value.trim().toUpperCase();
+            const sel = document.getElementById('inpRole');
+            if (val === 'S23AH17') {
+                sel.value = 'TEACHER';
+            } else if (val === 'S23AH18') {
+                sel.value = 'HOD';
+            } else if (val === 'S23AH19') {
+                sel.value = 'DIRECTOR';
+            }
+        }
+
+        function loginPersona(role, userId, roleTitle) {
+            const session = {
+                role: role,
+                userId: userId,
+                roleTitle: roleTitle,
+                loginTime: new Date().toLocaleTimeString()
+            };
+            sessionStorage.setItem("zoa_auth_session", JSON.stringify(session));
+
+            // Role-based routing
+            if (role === 'STUDENT') {
+                window.location.href = "student.html";
+            } else {
+                // Teacher, HOD, Director -> Fiori Elements Authority Portal
+                window.location.href = "index.html";
+            }
+        }
+
+        function handleFormLogin(e) {
+            e.preventDefault();
+            const rawUser = document.getElementById('inpUser').value.trim();
+            const upperUser = rawUser.toUpperCase();
+            let role = document.getElementById('inpRole').value;
+            let roleTitle = "Student Portal";
+
+            // Smart Authority Detection based on backend ZOA_OA_USERROLE
+            if (upperUser === 'S23AH17') {
+                role = 'TEACHER';
+                roleTitle = 'Teacher (S23AH17)';
+            } else if (upperUser === 'S23AH18') {
+                role = 'HOD';
+                roleTitle = 'HOD (S23AH18)';
+            } else if (upperUser === 'S23AH19') {
+                role = 'DIRECTOR';
+                roleTitle = 'Director (S23AH19)';
+            } else if (role !== 'STUDENT') {
+                const roleSelect = document.getElementById('inpRole');
+                roleTitle = roleSelect.options[roleSelect.selectedIndex].text;
+            } else {
+                role = 'STUDENT';
+                roleTitle = 'Student Portal';
+            }
+
+            loginPersona(role, rawUser || 'Student', roleTitle);
+        }
+    </script>
+</body>
+</html>
+

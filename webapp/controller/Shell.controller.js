@@ -89,6 +89,17 @@ sap.ui.define([
     return Controller.extend("zoa.zoarequestui.controller.Shell", {
 
         onInit: function () {
+            var sUserId = "Student";
+            var sRoleTitle = "Student Portal";
+            try {
+                var rawSess = sessionStorage.getItem("zoa_auth_session");
+                if (rawSess) {
+                    var oSess = JSON.parse(rawSess);
+                    if (oSess.userId) { sUserId = oSess.userId; }
+                    if (oSess.roleTitle) { sRoleTitle = oSess.roleTitle; }
+                }
+            } catch (e) {}
+
             var aInitialMessages = [
                 {
                     sender: "One Answer AI",
@@ -99,10 +110,23 @@ sap.ui.define([
             ];
 
             this.getView().setModel(new JSONModel({ messages: aInitialMessages, busy: false }), "chat");
-            this.getView().setModel(new JSONModel({ alertCount: "" }), "shellModel");
+            this.getView().setModel(new JSONModel({
+                alertCount: "",
+                userSubtitle: sRoleTitle + " (" + sUserId + ")",
+                userId: sUserId
+            }), "shellModel");
 
             // Setup polling for alerts every 30 seconds
             this._startAlertsPolling();
+        },
+
+        onLogoutPress: function () {
+            sessionStorage.removeItem("zoa_auth_session");
+            window.location.href = "login.html";
+        },
+
+        onSwitchToAuthority: function () {
+            window.location.href = "index.html";
         },
 
         onExit: function () {
