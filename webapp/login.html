@@ -267,6 +267,13 @@
                 return;
             }
 
+            if (rawPass !== "hana@123") {
+                errEl.innerText = "Invalid password. Please try again.";
+                errEl.style.display = "block";
+                passInp.focus();
+                return;
+            }
+
             errEl.style.display = "none";
             const upperUser = rawUser.toUpperCase();
 
