@@ -28,10 +28,19 @@
         <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#10B981;"></span>
         <span id="zoa-student-name" style="font-weight:600; color:#0F172A;">STUDENT</span>
         <span style="color:#CBD5E1;">|</span>
-        <a href="javascript:void(0)" onclick="sessionStorage.removeItem('zoa_auth_session'); window.location.href='login.html'" style="color:#DC2626; text-decoration:none; font-weight:500;">🚪 Logout</a>
+        <a href="javascript:void(0)" onclick="zoaStudentLogout()" style="color:#DC2626; text-decoration:none; font-weight:500;">🚪 Logout</a>
     </div>
 
     <script>
+        function zoaStudentLogout() {
+            sessionStorage.removeItem("zoa_auth_session");
+            fetch("/auth/logout", { method: "POST", credentials: "same-origin" })
+                .catch(function () {})
+                .finally(function () {
+                    window.location.href = "login.html";
+                });
+        }
+
         (function () {
             var raw = sessionStorage.getItem("zoa_auth_session");
             if (raw) {

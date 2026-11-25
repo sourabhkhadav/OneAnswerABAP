@@ -19,6 +19,12 @@ server:
           - path: /sap
             url: https://eight20s.mydomain.com:44360
             client: "800"
+    - name: sap-session-auth
+      beforeMiddleware: fiori-tools-proxy
+      configuration:
+        backendUrl: https://eight20s.mydomain.com:44360
+        client: "800"
+        servicePath: /sap/opu/odata4/sap/zoa_ui_oa_request_o4/srvd/sap/zoa_ui_oa_request/0001/
     - name: fiori-tools-appreload
       afterMiddleware: compression
       configuration:
@@ -43,3 +49,11 @@ builder:
     excludes:
       - /test/**
       - /localService/**
+---
+specVersion: "4.0"
+kind: extension
+type: server-middleware
+metadata:
+  name: sap-session-auth
+middleware:
+  path: lib/middleware/sapSessionAuth.cjs

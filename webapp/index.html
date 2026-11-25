@@ -19,7 +19,6 @@
             "zoa.zoarequestui": "./",
             "zoa.zoarequestui.student": "./student"
         }'
-        data-sap-ui-on-init="module:sap/ui/core/ComponentSupport"
         data-sap-ui-compat-version="edge"
         data-sap-ui-async="true"
         data-sap-ui-frame-options="trusted"
@@ -40,23 +39,65 @@
         <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#10B981;"></span>
         <span id="zoa-user-name" style="font-weight:600; color:#0F172A;">AUTHORITY</span>
         <span style="color:#CBD5E1;">|</span>
-        <a href="javascript:void(0)" onclick="sessionStorage.removeItem('zoa_auth_session'); window.location.href='login.html'" style="color:#DC2626; text-decoration:none; font-weight:500;">🚪 Logout</a>
+        <a href="javascript:void(0)" onclick="zoaLogout()" style="color:#DC2626; text-decoration:none; font-weight:500;">🚪 Logout</a>
     </div>
 
     <script>
-        (function () {
-            var raw = sessionStorage.getItem("zoa_auth_session");
-            if (raw) {
-                try {
-                    var sess = JSON.parse(raw);
-                    var el = document.getElementById("zoa-user-name");
-                    if (el) {
-                        var role = (sess.role || "AUTHORITY").toUpperCase();
-                        var uid = (sess.userId || "").toUpperCase();
-                        el.innerText = role + (uid ? " (" + uid + ")" : "");
-                    }
-                } catch (e) {}
+        function zoaLogout() {
+            sessionStorage.removeItem("zoa_auth_session");
+            fetch("/auth/logout", { method: "POST", credentials: "same-origin" })
+                .catch(function () {})
+                .finally(function () {
+                    window.location.href = "login.html";
+                });
+        }
+
+        function applyAuthorityBadge(sess) {
+            var el = document.getElementById("zoa-user-name");
+            if (el && sess) {
+                var role = (sess.role || "AUTHORITY").toUpperCase();
+                var uid = (sess.userId || "").toUpperCase();
+                el.innerText = role + (uid ? " (" + uid + ")" : "");
             }
+        }
+
+        function bootAuthorityApp() {
+            sap.ui.getCore().attachInit(function () {
+                sap.ui.require(["sap/ui/core/ComponentSupport"]);
+            });
+        }
+
+        (function () {
+            fetch("/auth/session", { credentials: "same-origin", cache: "no-store" })
+                .then(function (res) {
+                    if (res.status === 404) {
+                        var raw = sessionStorage.getItem("zoa_auth_session");
+                        if (raw) {
+                            try { applyAuthorityBadge(JSON.parse(raw)); } catch (e) {}
+                        }
+                        bootAuthorityApp();
+                        return null;
+                    }
+                    return res.json();
+                })
+                .then(function (sess) {
+                    if (!sess) { return; }
+                    if (!sess.authenticated) {
+                        sessionStorage.removeItem("zoa_auth_session");
+                        window.location.replace("login.html");
+                        return;
+                    }
+                    if (sess.isStudent) {
+                        window.location.replace("student.html");
+                        return;
+                    }
+                    sessionStorage.setItem("zoa_auth_session", JSON.stringify(sess));
+                    applyAuthorityBadge(sess);
+                    bootAuthorityApp();
+                })
+                .catch(function () {
+                    window.location.replace("login.html");
+                });
         })();
     </script>
 </body>

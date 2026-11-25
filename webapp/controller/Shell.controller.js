@@ -98,7 +98,7 @@ sap.ui.define([
                     if (oSess.userId) { sUserId = oSess.userId; }
                     if (oSess.roleTitle) { sRoleTitle = oSess.roleTitle; }
                 }
-            } catch (e) {}
+            } catch (e) { }
 
             var aInitialMessages = [
                 {
@@ -122,11 +122,28 @@ sap.ui.define([
 
         onLogoutPress: function () {
             sessionStorage.removeItem("zoa_auth_session");
-            window.location.href = "login.html";
+            fetch("/auth/logout", { method: "POST", credentials: "same-origin" })
+                .catch(function () {})
+                .finally(function () {
+                    window.location.href = "login.html";
+                });
         },
 
         onSwitchToAuthority: function () {
-            window.location.href = "index.html";
+            var bIsStudent = true;
+            try {
+                var rawSess = sessionStorage.getItem("zoa_auth_session");
+                if (rawSess) {
+                    var oSess = JSON.parse(rawSess);
+                    bIsStudent = !!oSess.isStudent || (String(oSess.role || "").toUpperCase() === "STUDENT");
+                }
+            } catch (e) {}
+
+            if (bIsStudent) {
+                window.location.href = "login.html";
+            } else {
+                window.location.href = "index.html";
+            }
         },
 
         onExit: function () {
@@ -286,7 +303,7 @@ sap.ui.define([
                     var oTab = that.byId("tabAlerts");
                     if (oTab) { oTab.setCount(sCount); }
                 })
-                .catch(function () {});
+                .catch(function () { });
         },
 
         // ─────────────────────────────────────────────────────────────
@@ -507,7 +524,7 @@ sap.ui.define([
             var oContext = oItem.getBindingContext();
             if (oContext) {
                 // If Alert has delete capability
-                oContext.delete("$auto").catch(function () {});
+                oContext.delete("$auto").catch(function () { });
             }
             oItem.getParent().removeItem(oItem);
             var iCount = parseInt(this.getView().getModel("shellModel").getProperty("/alertCount") || "0", 10);
@@ -719,18 +736,18 @@ sap.ui.define([
                     ]
                 })
             })
-            .then(function (res) {
-                return res.json();
-            })
-            .then(function (data) {
-                if (data.choices && data.choices[0] && data.choices[0].message) {
-                    return data.choices[0].message.content;
-                } else if (data.error) {
-                    throw new Error(data.error.message);
-                } else {
-                    return "Sorry, I could not generate an answer at this time.";
-                }
-            });
+                .then(function (res) {
+                    return res.json();
+                })
+                .then(function (data) {
+                    if (data.choices && data.choices[0] && data.choices[0].message) {
+                        return data.choices[0].message.content;
+                    } else if (data.error) {
+                        throw new Error(data.error.message);
+                    } else {
+                        return "Sorry, I could not generate an answer at this time.";
+                    }
+                });
         },
 
         formatDateMonth: function (sDate) {

@@ -22,8 +22,19 @@ sap.ui.define([
             bar.innerHTML = '<span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#10B981;"></span>' +
                 '<span id="zoa-student-name" style="font-weight:600; color:#0F172A;">STUDENT</span>' +
                 '<span style="color:#CBD5E1;">|</span>' +
-                '<a href="javascript:void(0)" onclick="sessionStorage.removeItem(\'zoa_auth_session\'); window.location.href=\'login.html\'" style="color:#DC2626; text-decoration:none; font-weight:500;">🚪 Logout</a>';
+                '<a href="javascript:void(0)" id="zoa-student-logout" style="color:#DC2626; text-decoration:none; font-weight:500;">🚪 Logout</a>';
             document.body.appendChild(bar);
+            var logoutLink = document.getElementById("zoa-student-logout");
+            if (logoutLink) {
+                logoutLink.addEventListener("click", function () {
+                    sessionStorage.removeItem("zoa_auth_session");
+                    fetch("/auth/logout", { method: "POST", credentials: "same-origin" })
+                        .catch(function () {})
+                        .finally(function () {
+                            window.location.href = "login.html";
+                        });
+                });
+            }
         }
         var raw = sessionStorage.getItem("zoa_auth_session");
         if (raw) {
@@ -39,39 +50,63 @@ sap.ui.define([
         }
     }
 
-    var oI18nModel = new ResourceModel({
-        bundleName: "zoa.zoarequestui.i18n.i18n",
-        supportedLocales: ["en"],
-        fallbackLocale: "en"
-    });
-
-    var oODataModel = new ODataModel({
-        serviceUrl: "/sap/opu/odata4/sap/zoa_ui_oa_request_o4/srvd/sap/zoa_ui_oa_request/0001/",
-        synchronizationMode: "None",
-        operationMode: "Server",
-        autoExpandSelect: true,
-        earlyRequests: true,
-        groupId: "$auto"
-    });
-
-    var oDeviceModel = new JSONModel(Device);
-    oDeviceModel.setDefaultBindingMode("OneWay");
-
-    XMLView.create({
-        viewName: "zoa.zoarequestui.view.Shell"
-    }).then(function (oView) {
-        oView.setModel(oODataModel);
-        oView.setModel(oI18nModel, "i18n");
-        oView.setModel(oDeviceModel, "device");
-        oView.placeAt("content");
-        // Force full height after rendering & attach top-right corner badge
-        oView.addEventDelegate({
-            onAfterRendering: function () {
-                var oDom = oView.getDomRef();
-                if (oDom) { oDom.style.height = "100%"; }
-                ensureStudentBar();
-            }
+    function bootStudentView() {
+        var oI18nModel = new ResourceModel({
+            bundleName: "zoa.zoarequestui.i18n.i18n",
+            supportedLocales: ["en"],
+            fallbackLocale: "en"
         });
-        ensureStudentBar();
-    });
+
+        var oODataModel = new ODataModel({
+            serviceUrl: "/sap/opu/odata4/sap/zoa_ui_oa_request_o4/srvd/sap/zoa_ui_oa_request/0001/",
+            synchronizationMode: "None",
+            operationMode: "Server",
+            autoExpandSelect: true,
+            earlyRequests: true,
+            groupId: "$auto"
+        });
+
+        var oDeviceModel = new JSONModel(Device);
+        oDeviceModel.setDefaultBindingMode("OneWay");
+
+        XMLView.create({
+            viewName: "zoa.zoarequestui.view.Shell"
+        }).then(function (oView) {
+            oView.setModel(oODataModel);
+            oView.setModel(oI18nModel, "i18n");
+            oView.setModel(oDeviceModel, "device");
+            oView.placeAt("content");
+            // Force full height after rendering & attach top-right corner badge
+            oView.addEventDelegate({
+                onAfterRendering: function () {
+                    var oDom = oView.getDomRef();
+                    if (oDom) { oDom.style.height = "100%"; }
+                    ensureStudentBar();
+                }
+            });
+            ensureStudentBar();
+        });
+    }
+
+    fetch("/auth/session", { credentials: "same-origin", cache: "no-store" })
+        .then(function (res) {
+            if (res.status === 404) {
+                bootStudentView();
+                return null;
+            }
+            return res.json();
+        })
+        .then(function (sess) {
+            if (!sess) { return; }
+            if (!sess.authenticated) {
+                sessionStorage.removeItem("zoa_auth_session");
+                window.location.replace("login.html");
+                return;
+            }
+            sessionStorage.setItem("zoa_auth_session", JSON.stringify(sess));
+            bootStudentView();
+        })
+        .catch(function () {
+            window.location.replace("login.html");
+        });
 });
