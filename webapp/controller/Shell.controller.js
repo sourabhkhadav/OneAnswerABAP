@@ -179,7 +179,7 @@ sap.ui.define([
             var aInitialMessages = [
                 {
                     sender: "One Answer AI",
-                    text: "Hello! I am the One Answer Student Assistant. I am directly connected to your live SAP S/4HANA database (/Request, /Alert, /EventsHolidays, /Authority). You can ask me anything about events, holidays, request status, or authority decisions.",
+                    text: "Hello! Ask me about confirmed events, holidays, request status, or approvals.",
                     time: this._now(),
                     initials: "OA"
                 }
@@ -827,6 +827,52 @@ sap.ui.define([
                 return false;
             }
             return vEntityDeletable !== false;
+        },
+
+        _formatShortDate: function (vDate) {
+            if (!vDate) { return ""; }
+            var sDate = vDate instanceof Date ? vDate.toISOString().slice(0, 10) : String(vDate);
+            var m = sDate.match(/^(\d{4})-(\d{2})-(\d{2})/);
+            if (!m) { return sDate; }
+            var aMonths = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+            var iM = parseInt(m[2], 10);
+            if (iM < 1 || iM > 12) { return sDate; }
+            return aMonths[iM - 1] + " " + parseInt(m[3], 10) + ", " + m[1];
+        },
+
+        formatCleanDescription: function (sDescription) {
+            return String(sDescription || "").replace(/^\[Student:\s*[^\]]+\]\s*/i, "").trim();
+        },
+
+        formatCardMeta: function (sEventDate, sTopic, sAuthorityRole, sDecideBy, sStatus, sStatusText, sCreatedBy, sDescription, bIsStudent) {
+            var aParts = [];
+            var sEvDate = this._formatShortDate(sEventDate);
+            if (sEvDate) { aParts.push(sEvDate); }
+            var sRole = resolveAuthorityRole(sTopic, sAuthorityRole);
+            if (sRole) { aParts.push(sRole); }
+            var st = normalizeStatusCode(sStatus, sStatusText);
+            if (st === "P") {
+                var sDecide = this._formatShortDate(sDecideBy);
+                if (sDecide) { aParts.push("Decide by " + sDecide); }
+            }
+            if (!bIsStudent) {
+                var sTagged = extractTaggedStudentId(sDescription);
+                var sCreator = sTagged || String(sCreatedBy || "").trim().toUpperCase();
+                if (sCreator) { aParts.push("By " + sCreator); }
+            }
+            return aParts.join(" · ");
+        },
+
+        formatSubInfo: function (sDescription, sDecisionReason) {
+            var sDesc = this.formatCleanDescription(sDescription);
+            var sReason = String(sDecisionReason || "").trim();
+            if (sReason && sDesc) {
+                return sDesc + " · Decision: " + sReason;
+            }
+            if (sReason) {
+                return "Decision: " + sReason;
+            }
+            return sDesc;
         },
 
         onOpenClassicTable: function () {

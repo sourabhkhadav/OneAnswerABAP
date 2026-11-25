@@ -44,12 +44,9 @@
                         <content>
                             <VBox class="zoaContentContainer">
                                 <HBox alignItems="Center" justifyContent="SpaceBetween" wrap="Wrap" class="zoaHeaderToolbar">
-                                    <VBox class="sapUiTinyMarginBottom">
-                                        <Title text="Confirmed Events &amp; Holidays" level="H3" class="zoaSectionTitle"/>
-                                        <Text text="Approved academic schedule from SAP S/4HANA live records" class="zoaSectionSubtitle"/>
-                                    </VBox>
-                                    <HBox alignItems="Center" class="sapUiTinyMarginBottom">
-                                        <SegmentedButton id="eventsTopicFilter" selectedKey="ALL" selectionChange=".onFilterEventsByTopic" class="sapUiTinyMarginEnd">
+                                    <Title text="Confirmed Events" level="H3" class="zoaSectionTitle"/>
+                                    <HBox alignItems="Center">
+                                        <SegmentedButton id="eventsTopicFilter" selectedKey="ALL" selectionChange=".onFilterEventsByTopic" class="zoaEventsSegBtn sapUiTinyMarginEnd">
                                             <items>
                                                 <SegmentedButtonItem key="ALL" text="All"/>
                                                 <SegmentedButtonItem key="EVENT" text="Events"/>
@@ -57,8 +54,8 @@
                                                 <SegmentedButtonItem key="HOLIDAY" text="Holidays"/>
                                             </items>
                                         </SegmentedButton>
-                                        <Button text="New Request" icon="sap-icon://add" type="Emphasized" press=".onOpenCreateDialog" visible="{= !${shellModel>/isStudent} }" class="zoaPrimaryButton sapUiTinyMarginEnd"/>
-                                        <Button icon="sap-icon://refresh" type="Transparent" press=".onRefreshPress" tooltip="Refresh Events from SAP" class="zoaRefreshButton"/>
+                                        <Button text="+ New Request" type="Emphasized" press=".onOpenCreateDialog" visible="{= !${shellModel>/isStudent} }" class="zoaPrimaryButton sapUiTinyMarginEnd"/>
+                                        <Button icon="sap-icon://refresh" press=".onRefreshPress" tooltip="Refresh" class="zoaSecondaryBtn"/>
                                     </HBox>
                                 </HBox>
                                 <List
@@ -127,17 +124,11 @@
                             <VBox class="zoaContentContainer">
                                 <!-- Top Header Row -->
                                 <HBox alignItems="Center" justifyContent="SpaceBetween" wrap="Wrap" class="zoaHeaderToolbar">
-                                    <VBox class="sapUiTinyMarginBottom">
-                                        <HBox alignItems="Center">
-                                            <Title text="SAP Requests" level="H3" class="zoaSectionTitle sapUiTinyMarginEnd"/>
-                                            <Text text="Live Table ZOA_OA_REQUEST" class="zoaLiveTableBadge"/>
-                                        </HBox>
-                                        <Text text="{= ${shellModel>/isStudent} ? 'Track authority decisions or submit a new student request directly to SAP' : 'Review student requests, filter by status or type, and decide Pending items' }" class="zoaSectionSubtitle"/>
-                                    </VBox>
-                                    <HBox alignItems="Center" class="sapUiTinyMarginBottom">
+                                    <Title text="Requests" level="H3" class="zoaSectionTitle"/>
+                                    <HBox alignItems="Center">
                                         <Button text="Classic Table" icon="sap-icon://table-view" press=".onOpenClassicTable" visible="{= !${shellModel>/isStudent} }" tooltip="Open Fiori Elements Table Backup" class="zoaSecondaryBtn sapUiTinyMarginEnd"/>
                                         <Button text="+ New Request" type="Emphasized" press=".onOpenCreateDialog" class="zoaPrimaryButton sapUiTinyMarginEnd"/>
-                                        <Button icon="sap-icon://refresh" press=".onRefreshPress" tooltip="Refresh from SAP" class="zoaSecondaryBtn"/>
+                                        <Button icon="sap-icon://refresh" press=".onRefreshPress" tooltip="Refresh" class="zoaSecondaryBtn"/>
                                     </HBox>
                                 </HBox>
 
@@ -192,8 +183,8 @@
                                     </HBox>
                                     <SearchField
                                         id="reqSearchField"
-                                        width="280px"
-                                        placeholder="Search by student ID or title..."
+                                        width="240px"
+                                        placeholder="Search ID or title..."
                                         liveChange=".onSearchRequests"
                                         search=".onSearchRequests"
                                         class="zoaSearchField"/>
@@ -205,7 +196,7 @@
                                         path: '/Request',
                                         sorter: [{ path: 'CreatedAt', descending: true }, { path: 'LastChangedAt', descending: true }, { path: 'EventDate', descending: true }]
                                     }"
-                                    noDataText="No requests found in SAP database"
+                                    noDataText="No requests found"
                                     busyIndicatorDelay="0"
                                     updateFinished=".onRequestsLoaded"
                                     showSeparators="None">
@@ -214,22 +205,20 @@
                                             <HBox alignItems="Center">
                                                 <core:Icon
                                                     src="{= ${Topic} === 'HOLIDAY' ? 'sap-icon://flight' : (${Topic} === 'EVENT' ? 'sap-icon://theater' : 'sap-icon://map') }"
-                                                    size="1.8rem"
+                                                    size="1.45rem"
                                                     color="{= ${Topic} === 'HOLIDAY' ? '#0070F2' : (${Topic} === 'EVENT' ? '#7E22CE' : '#B45309') }"
                                                     class="sapUiSmallMarginEnd sapUiTinyMarginBegin"/>
                                                 <VBox>
-                                                    <HBox alignItems="Center" class="sapUiTinyMarginBottom">
-                                                        <Title text="{Title}" level="H4" class="sapUiTinyMarginEnd"/>
+                                                    <HBox alignItems="Center">
+                                                        <Title text="{Title}" level="H5" class="sapUiTinyMarginEnd"/>
                                                         <ObjectStatus
                                                             text="{Topic}"
                                                             inverted="true"
                                                             state="{= ${Topic} === 'HOLIDAY' ? 'Information' : (${Topic} === 'EVENT' ? 'Indication06' : 'Warning') }"
                                                             class="sapUiTinyMarginEnd"/>
                                                     </HBox>
-                                                    <Label text="Event Date: {path: 'EventDate', type: 'sap.ui.model.odata.type.Date'} · Authority: {parts: ['Topic', 'AuthorityRole'], formatter: '.formatTargetAuthority'} · Decide By: {path: 'DecideBy', type: 'sap.ui.model.odata.type.Date'}" design="Standard"/>
-                                                    <Text text="Student / Created By: {CreatedBy}" visible="{= !${shellModel>/isStudent} &amp;&amp; !!${path: 'CreatedBy', targetType: 'any'} }" class="sapUiTinyMarginTop"/>
-                                                    <Text text="{Description}" visible="{= !!${path: 'Description', targetType: 'any'} }" class="sapUiTinyMarginTop"/>
-                                                    <Text text="Decision: {DecisionReason}" visible="{= !!${path: 'DecisionReason', targetType: 'any'} }" class="sapUiTinyMarginTop"/>
+                                                    <Text text="{parts: [{path: 'EventDate', targetType: 'any'}, {path: 'Topic', targetType: 'any'}, {path: 'AuthorityRole', targetType: 'any'}, {path: 'DecideBy', targetType: 'any'}, {path: 'Status', targetType: 'any'}, {path: 'StatusText', targetType: 'any'}, {path: 'CreatedBy', targetType: 'any'}, {path: 'Description', targetType: 'any'}, {path: 'shellModel>/isStudent', targetType: 'any'}], formatter: '.formatCardMeta'}" class="zoaCardMeta"/>
+                                                    <Text text="{parts: [{path: 'Description', targetType: 'any'}, {path: 'DecisionReason', targetType: 'any'}], formatter: '.formatSubInfo'}" visible="{= !!${path: 'Description', targetType: 'any'} || !!${path: 'DecisionReason', targetType: 'any'} }" class="zoaCardSubText"/>
                                                 </VBox>
                                             </HBox>
                                             <HBox alignItems="Center" class="sapUiTinyMarginTop">
@@ -278,12 +267,9 @@
                         <content>
                             <VBox class="zoaContentContainer">
                                 <HBox alignItems="Center" justifyContent="SpaceBetween" wrap="Wrap" class="zoaHeaderToolbar">
-                                    <VBox class="sapUiTinyMarginBottom">
-                                        <Title text="Notifications &amp; Alerts" level="H3" class="zoaSectionTitle"/>
-                                        <Text text="Real-time decision updates for {shellModel>/userSubtitle}" class="zoaSectionSubtitle"/>
-                                    </VBox>
-                                    <HBox alignItems="Center" class="sapUiTinyMarginBottom">
-                                        <Button icon="sap-icon://refresh" press=".onRefreshPress" tooltip="Refresh Alerts from SAP" class="zoaSecondaryBtn sapUiTinyMarginEnd"/>
+                                    <Title text="Alerts" level="H3" class="zoaSectionTitle"/>
+                                    <HBox alignItems="Center">
+                                        <Button icon="sap-icon://refresh" press=".onRefreshPress" tooltip="Refresh" class="zoaSecondaryBtn sapUiTinyMarginEnd"/>
                                         <Text text="{shellModel>/alertCount} Alerts" visible="{= !!${shellModel>/alertCount} }" class="zoaAlertCountPill sapUiTinyMarginEnd"/>
                                         <Button text="Dismiss All" icon="sap-icon://accept" press=".onDismissAllAlerts" visible="{= !!${shellModel>/alertCount} }" class="zoaSecondaryBtn"/>
                                     </HBox>
@@ -371,8 +357,8 @@
                                 </List>
 
                                 <!-- Busy Indicator -->
-                                <FlexBox justifyContent="Center" visible="{chat>/busy}" class="sapUiMediumMargin">
-                                    <BusyIndicator text="One Answer AI is checking live SAP database..."/>
+                                <FlexBox justifyContent="Center" visible="{chat>/busy}" class="sapUiSmallMargin">
+                                    <BusyIndicator text="Checking..."/>
                                 </FlexBox>
 
                                 <!-- Input Bar -->
