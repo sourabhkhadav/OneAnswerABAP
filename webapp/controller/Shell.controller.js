@@ -112,7 +112,7 @@ sap.ui.define([
             this.getView().setModel(new JSONModel({ messages: aInitialMessages, busy: false }), "chat");
             this.getView().setModel(new JSONModel({
                 alertCount: "",
-                userSubtitle: sRoleTitle + " (" + sUserId + ")",
+                userSubtitle: sRoleTitle.indexOf(sUserId) !== -1 ? sRoleTitle : (sRoleTitle + " (" + sUserId + ")"),
                 userId: sUserId
             }), "shellModel");
 
