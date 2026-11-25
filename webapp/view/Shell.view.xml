@@ -256,7 +256,7 @@
                                                     type="Transparent"
                                                     tooltip="Delete Request"
                                                     press=".onDeleteRequestPress"
-                                                    visible="{= ${path: '__EntityControl/Deletable', targetType: 'any'} !== false }"
+                                                    visible="{parts: [{path: 'Status', targetType: 'any'}, {path: 'StatusText', targetType: 'any'}, {path: '__EntityControl/Deletable', targetType: 'any'}], formatter: '.formatCanDelete'}"
                                                     class="zoaDeleteButton"/>
                                             </HBox>
                                         </HBox>

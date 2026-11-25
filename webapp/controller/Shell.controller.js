@@ -123,6 +123,41 @@ sap.ui.define([
         return TOPIC_TO_ROLE[sUpperTopic] || "";
     }
 
+    function extractTaggedStudentId(sDescription) {
+        var m = String(sDescription || "").match(/\[Student:\s*([^\]]+)\]/i);
+        return m ? String(m[1]).trim().toUpperCase() : "";
+    }
+
+    function isRequestCreator(oReq, sViewerUserId) {
+        var sViewer = String(sViewerUserId || "").trim().toUpperCase();
+        if (!sViewer) {
+            return false;
+        }
+        var sTagged = extractTaggedStudentId(oReq && oReq.Description);
+        if (sTagged) {
+            return sTagged === sViewer;
+        }
+        var sCreatedBy = String((oReq && oReq.CreatedBy) || "").trim().toUpperCase();
+        return !!sCreatedBy && sCreatedBy === sViewer;
+    }
+
+    function canViewRequest(oReq, bIsStudent, sViewerRole, sViewerUserId) {
+        var st = normalizeStatusCode(oReq && oReq.Status, oReq && oReq.StatusText);
+        if (st !== "P") {
+            return true;
+        }
+        if (isRequestCreator(oReq, sViewerUserId)) {
+            return true;
+        }
+        if (!bIsStudent) {
+            var sTargetRole = resolveAuthorityRole(oReq && oReq.Topic, oReq && oReq.AuthorityRole);
+            if (sTargetRole && sTargetRole === String(sViewerRole || "").trim().toUpperCase()) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     return Controller.extend("zoa.zoarequestui.controller.Shell", {
 
         onInit: function () {
@@ -297,8 +332,15 @@ sap.ui.define([
                 if (aResults[2]._error) { oErrors.events = aResults[2]._error; }
                 if (aResults[3]._error) { oErrors.authorities = aResults[3]._error; }
 
-                // Clean draft control internal fields before passing to AI
-                var cleanRequests = aRequests.map(function (req) {
+                var oViewerModel = that.getView().getModel("shellModel");
+                var bViewerIsStudent = oViewerModel ? !!oViewerModel.getProperty("/isStudent") : true;
+                var sViewerRole = oViewerModel ? oViewerModel.getProperty("/role") : "STUDENT";
+                var sViewerUserId = oViewerModel ? oViewerModel.getProperty("/userId") : "";
+
+                // Clean draft control internal fields before passing to AI (respecting PENDING visibility)
+                var cleanRequests = aRequests.filter(function (req) {
+                    return canViewRequest(req, bViewerIsStudent, sViewerRole, sViewerUserId);
+                }).map(function (req) {
                     return {
                         topic: req[FIELD_MAP.request.topic] || req.Topic,
                         title: req[FIELD_MAP.request.title] || req.Title,
@@ -554,9 +596,18 @@ sap.ui.define([
         // ─────────────────────────────────────────────────────────────
 
         onDeleteRequestPress: function (oEvent) {
-            var oItem = oEvent.getSource().getParent().getParent();
-            var oContext = oItem.getBindingContext();
+            var oContext = oEvent.getSource().getBindingContext();
+            if (!oContext) {
+                var oItem = oEvent.getSource().getParent().getParent();
+                oContext = oItem && oItem.getBindingContext();
+            }
             if (!oContext) { return; }
+
+            var oObj = oContext.getObject() || {};
+            if (normalizeStatusCode(oObj.Status, oObj.StatusText) === "P") {
+                MessageBox.error("Pending requests cannot be edited or deleted.");
+                return;
+            }
 
             var that = this;
             MessageBox.confirm("Are you sure you want to delete this request from SAP?", {
@@ -675,14 +726,21 @@ sap.ui.define([
             if (!oRequestsList || !oModel) {
                 return;
             }
+            var bIsStudent = !!oModel.getProperty("/isStudent");
+            var sViewerRole = oModel.getProperty("/role");
+            var sViewerUserId = oModel.getProperty("/userId");
             var sQuery = String(oModel.getProperty("/searchQuery") || "").toLowerCase();
             oRequestsList.getItems().forEach(function (oItem) {
+                var oCtx = oItem.getBindingContext();
+                var oObj = oCtx ? oCtx.getObject() : {};
+                if (!canViewRequest(oObj, bIsStudent, sViewerRole, sViewerUserId)) {
+                    oItem.setVisible(false);
+                    return;
+                }
                 if (!sQuery) {
                     oItem.setVisible(true);
                     return;
                 }
-                var oCtx = oItem.getBindingContext();
-                var oObj = oCtx ? oCtx.getObject() : {};
                 var sHaystack = [
                     oObj.Title,
                     oObj.CreatedBy,
@@ -698,14 +756,23 @@ sap.ui.define([
             var that = this;
             this._fetchODataEntity("/" + ENTITY_SETS.request)
                 .then(function (aRequests) {
-                    var oCounts = { all: aRequests.length, pending: 0, approved: 0, declined: 0 };
-                    aRequests.forEach(function (r) {
+                    var oModel = that.getView().getModel("shellModel");
+                    var bIsStudent = oModel ? !!oModel.getProperty("/isStudent") : true;
+                    var sViewerRole = oModel ? oModel.getProperty("/role") : "STUDENT";
+                    var sViewerUserId = oModel ? oModel.getProperty("/userId") : "";
+
+                    var aVisible = aRequests.filter(function (r) {
+                        return canViewRequest(r, bIsStudent, sViewerRole, sViewerUserId);
+                    });
+
+                    var oCounts = { all: aVisible.length, pending: 0, approved: 0, declined: 0 };
+                    aVisible.forEach(function (r) {
                         var st = normalizeStatusCode(r.Status, r.StatusText);
                         if (st === "P") { oCounts.pending++; }
                         else if (st === "C") { oCounts.approved++; }
                         else if (st === "N") { oCounts.declined++; }
                     });
-                    that.getView().getModel("shellModel").setProperty("/counts", oCounts);
+                    oModel.setProperty("/counts", oCounts);
                 })
                 .catch(function () { });
         },
@@ -753,6 +820,13 @@ sap.ui.define([
             // Fallback (e.g. mock data without __OperationControl) routes strictly by Topic -> AuthorityRole
             var sTargetRole = resolveAuthorityRole(sTopic, sAuthorityRole);
             return !!sTargetRole && sTargetRole === String(sUserRole || "").trim().toUpperCase();
+        },
+
+        formatCanDelete: function (sStatus, sStatusText, vEntityDeletable) {
+            if (normalizeStatusCode(sStatus, sStatusText) === "P") {
+                return false;
+            }
+            return vEntityDeletable !== false;
         },
 
         onOpenClassicTable: function () {
