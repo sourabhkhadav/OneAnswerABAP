@@ -231,7 +231,7 @@
             </div>
 
             <div class="hint-bar">
-                <strong>SAP Authority:</strong> S23AH17 (Teacher), S23AH18 (HOD), S23AH19 (Director)<br>
+                <strong>SAP Authority:</strong> S23AH56 (Teacher), S23AH17 (HOD), S23AH18 (Director)<br>
                 <strong>Students:</strong> Enter Roll No or Student ID
             </div>
 
@@ -274,18 +274,18 @@
             let roleTitle = "Student Portal";
             let redirectUrl = "student.html";
 
-            // Role assignment matching S/4HANA backend authority
-            if (upperUser === "S23AH17") {
+            // Role assignment matching S/4HANA backend authority (zoa_oa_userrole)
+            if (upperUser === "S23AH56") {
                 role = "TEACHER";
-                roleTitle = "Teacher (S23AH17)";
+                roleTitle = "Teacher (S23AH56)";
+                redirectUrl = "index.html";
+            } else if (upperUser === "S23AH17") {
+                role = "HOD";
+                roleTitle = "HOD (S23AH17)";
                 redirectUrl = "index.html";
             } else if (upperUser === "S23AH18") {
-                role = "HOD";
-                roleTitle = "HOD (S23AH18)";
-                redirectUrl = "index.html";
-            } else if (upperUser === "S23AH19") {
                 role = "DIRECTOR";
-                roleTitle = "Director (S23AH19)";
+                roleTitle = "Director (S23AH18)";
                 redirectUrl = "index.html";
             } else {
                 role = "STUDENT";
