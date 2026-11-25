@@ -226,7 +226,7 @@
                                                             state="{= ${Topic} === 'HOLIDAY' ? 'Information' : (${Topic} === 'EVENT' ? 'Indication06' : 'Warning') }"
                                                             class="sapUiTinyMarginEnd"/>
                                                     </HBox>
-                                                    <Label text="Event Date: {path: 'EventDate', type: 'sap.ui.model.odata.type.Date'} · Authority: {AuthorityRole} · Decide By: {path: 'DecideBy', type: 'sap.ui.model.odata.type.Date'}" design="Standard"/>
+                                                    <Label text="Event Date: {path: 'EventDate', type: 'sap.ui.model.odata.type.Date'} · Authority: {parts: ['Topic', 'AuthorityRole'], formatter: '.formatTargetAuthority'} · Decide By: {path: 'DecideBy', type: 'sap.ui.model.odata.type.Date'}" design="Standard"/>
                                                     <Text text="Student / Created By: {CreatedBy}" visible="{= !${shellModel>/isStudent} &amp;&amp; !!${path: 'CreatedBy', targetType: 'any'} }" class="sapUiTinyMarginTop"/>
                                                     <Text text="{Description}" visible="{= !!${path: 'Description', targetType: 'any'} }" class="sapUiTinyMarginTop"/>
                                                     <Text text="Decision: {DecisionReason}" visible="{= !!${path: 'DecisionReason', targetType: 'any'} }" class="sapUiTinyMarginTop"/>
@@ -234,22 +234,22 @@
                                             </HBox>
                                             <HBox alignItems="Center" class="sapUiTinyMarginTop">
                                                 <ObjectStatus
-                                                    text="{StatusText}"
-                                                    state="{= ${Status} === 'C' ? 'Success' : (${Status} === 'N' ? 'Error' : 'Warning') }"
-                                                    icon="{= ${Status} === 'C' ? 'sap-icon://accept' : (${Status} === 'N' ? 'sap-icon://decline' : 'sap-icon://pending') }"
+                                                    text="{parts: ['Status', 'StatusText'], formatter: '.formatStatusText'}"
+                                                    state="{parts: ['Status', 'StatusText'], formatter: '.formatStatusState'}"
+                                                    icon="{parts: ['Status', 'StatusText'], formatter: '.formatStatusIcon'}"
                                                     inverted="true"
                                                     class="sapUiSmallMarginEnd"/>
                                                 <Button
                                                     text="Happening"
                                                     icon="sap-icon://accept"
                                                     press=".onConfirmRequestPress"
-                                                    visible="{= !${shellModel>/isStudent} &amp;&amp; ${path: '__OperationControl/confirmRequest', targetType: 'any'} === true }"
+                                                    visible="{parts: [{path: 'shellModel>/isStudent', targetType: 'any'}, {path: 'shellModel>/role', targetType: 'any'}, {path: 'Status', targetType: 'any'}, {path: 'StatusText', targetType: 'any'}, {path: 'Topic', targetType: 'any'}, {path: 'AuthorityRole', targetType: 'any'}, {path: '__OperationControl/confirmRequest', targetType: 'any'}], formatter: '.formatCanDecide'}"
                                                     class="zoaHappeningBtn sapUiTinyMarginEnd"/>
                                                 <Button
                                                     text="Not happening"
                                                     icon="sap-icon://decline"
                                                     press=".onRejectRequestPress"
-                                                    visible="{= !${shellModel>/isStudent} &amp;&amp; ${path: '__OperationControl/rejectRequest', targetType: 'any'} === true }"
+                                                    visible="{parts: [{path: 'shellModel>/isStudent', targetType: 'any'}, {path: 'shellModel>/role', targetType: 'any'}, {path: 'Status', targetType: 'any'}, {path: 'StatusText', targetType: 'any'}, {path: 'Topic', targetType: 'any'}, {path: 'AuthorityRole', targetType: 'any'}, {path: '__OperationControl/rejectRequest', targetType: 'any'}], formatter: '.formatCanDecide'}"
                                                     class="zoaNotHappeningBtn sapUiTinyMarginEnd"/>
                                                 <Button
                                                     icon="sap-icon://delete"

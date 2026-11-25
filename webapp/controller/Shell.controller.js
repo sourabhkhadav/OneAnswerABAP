@@ -86,6 +86,43 @@ sap.ui.define([
     var GROQ_MODEL = (window.ONE_ANSWER_CONFIG && window.ONE_ANSWER_CONFIG.GROQ_MODEL) || "qwen/qwen3.8-27b";
     var SERVICE_BASE_URL = "/sap/opu/odata4/sap/zoa_ui_oa_request_o4/srvd/sap/zoa_ui_oa_request/0001/";
 
+    var TOPIC_TO_ROLE = {
+        HOLIDAY: "DIRECTOR",
+        EVENT: "HOD",
+        TRIP: "TEACHER"
+    };
+
+    var ROLE_TO_TOPIC = {
+        DIRECTOR: "HOLIDAY",
+        HOD: "EVENT",
+        TEACHER: "TRIP"
+    };
+
+    function normalizeStatusCode(sStatus, sStatusText) {
+        var sRaw = String(sStatus || "").trim().toUpperCase();
+        var sTxt = String(sStatusText || "").trim().toUpperCase();
+        if (sRaw === "C" || sRaw === "CONFIRMED" || sRaw === "APPROVED" || sTxt === "CONFIRMED" || sTxt === "APPROVED") {
+            return "C";
+        }
+        if (sRaw === "N" || sRaw === "REJECTED" || sRaw === "DECLINED" || sRaw === "NOT HAPPENING" ||
+            sTxt === "NOT HAPPENING" || sTxt === "REJECTED" || sTxt === "DECLINED") {
+            return "N";
+        }
+        if (sRaw === "P" || sRaw === "PENDING" || sTxt === "PENDING" || (!sRaw && !sTxt)) {
+            return "P";
+        }
+        return sRaw;
+    }
+
+    function resolveAuthorityRole(sTopic, sAuthorityRole) {
+        var sRole = String(sAuthorityRole || "").trim().toUpperCase();
+        if (sRole) {
+            return sRole;
+        }
+        var sUpperTopic = String(sTopic || "").trim().toUpperCase();
+        return TOPIC_TO_ROLE[sUpperTopic] || "";
+    }
+
     return Controller.extend("zoa.zoarequestui.controller.Shell", {
 
         onInit: function () {
@@ -113,6 +150,9 @@ sap.ui.define([
                 }
             ];
 
+            var sInitialStatusFilter = bIsStudent ? "ALL" : "P";
+            var sInitialTypeFilter = (!bIsStudent && ROLE_TO_TOPIC[sRole]) ? ROLE_TO_TOPIC[sRole] : "ALL";
+
             this.getView().setModel(new JSONModel({ messages: aInitialMessages, busy: false }), "chat");
             this.getView().setModel(new JSONModel({
                 alertCount: "",
@@ -120,8 +160,8 @@ sap.ui.define([
                 userId: sUserId,
                 role: sRole,
                 isStudent: bIsStudent,
-                statusFilter: "ALL",
-                typeFilter: "ALL",
+                statusFilter: sInitialStatusFilter,
+                typeFilter: sInitialTypeFilter,
                 searchQuery: "",
                 counts: { all: 0, pending: 0, approved: 0, declined: 0 }
             }), "shellModel");
@@ -133,11 +173,22 @@ sap.ui.define([
                 }
             }
 
+            this._bInitialFilterApplied = false;
             this._syncFilterButtonStyles();
             this._refreshRequestCounts();
 
             // Setup polling for alerts & live request counts every 30 seconds
             this._startAlertsPolling();
+        },
+
+        onAfterRendering: function () {
+            if (!this._bInitialFilterApplied) {
+                var oRequestsList = this.byId("requestsList");
+                if (oRequestsList && oRequestsList.getBinding("items")) {
+                    this._bInitialFilterApplied = true;
+                    this._applyRequestFilters();
+                }
+            }
         },
 
         onLogoutPress: function () {
@@ -432,15 +483,31 @@ sap.ui.define([
                 return;
             }
 
+            var oShellModel = this.getView().getModel("shellModel");
+            var bIsStudent = oShellModel && oShellModel.getProperty("/isStudent");
+            var sUserId = (oShellModel && oShellModel.getProperty("/userId")) || "";
+            var sTopic = String(oData.Topic || "EVENT").trim().toUpperCase();
+            var sDescription = String(oData.Description || "").trim();
+
+            if (bIsStudent && sUserId) {
+                var sTag = "[Student: " + String(sUserId).toUpperCase() + "]";
+                if (sDescription.indexOf(sTag) === -1) {
+                    sDescription = sDescription ? (sTag + " " + sDescription) : sTag;
+                }
+                if (sDescription.length > 255) {
+                    sDescription = sDescription.slice(0, 255);
+                }
+            }
+
             var oListBinding = oModel.bindList("/" + ENTITY_SETS.request, null, null, null, {
                 $$updateGroupId: "$auto"
             });
 
             var oContext = oListBinding.create({
-                Topic: oData.Topic,
+                Topic: sTopic,
                 Title: oData.Title,
                 EventDate: oData.EventDate,
-                Description: oData.Description || ""
+                Description: sDescription
             });
 
             sap.ui.core.BusyIndicator.show(0);
@@ -450,18 +517,27 @@ sap.ui.define([
                     return oContext.created();
                 })
                 .then(function () {
-                    // Try RAP Draft Activation action if entity is draft-enabled
+                    var oCreatedObj = oContext.getObject() || {};
+                    if (oCreatedObj.IsActiveEntity === true) {
+                        return oCreatedObj;
+                    }
+                    // Activate RAP draft so the request becomes visible in Authority queues
                     var oAction = oModel.bindContext(
                         "com.sap.gateway.srvd.zoa_ui_oa_request.v0001.Activate(...)",
                         oContext
                     );
-                    return oAction.execute().catch(function (e) {
-                        // If Activate action fails because entity is already active, ignore
-                        console.info("[OneAnswer] Draft activate result:", e);
+                    return oAction.execute().then(function () {
+                        return oContext.requestObject().catch(function () {
+                            return oContext.getObject() || {};
+                        });
                     });
                 })
-                .then(function () {
+                .then(function (oSavedObj) {
                     sap.ui.core.BusyIndicator.hide();
+                    var sSavedStatus = normalizeStatusCode(oSavedObj && oSavedObj.Status, oSavedObj && oSavedObj.StatusText);
+                    if (bIsStudent && sSavedStatus !== "P") {
+                        console.warn("[OneAnswer] Student request did not land in Pending state (check SAP transport user in .env):", oSavedObj);
+                    }
                     MessageToast.show("Request successfully created in SAP database!");
                     that._refreshAllLists();
                 })
@@ -528,6 +604,16 @@ sap.ui.define([
         },
 
         onRequestsLoaded: function () {
+            if (!this._bInitialFilterApplied) {
+                this._bInitialFilterApplied = true;
+                var oModel = this.getView().getModel("shellModel");
+                var sStatus = oModel && oModel.getProperty("/statusFilter");
+                var sType = oModel && oModel.getProperty("/typeFilter");
+                if ((sStatus && sStatus !== "ALL") || (sType && sType !== "ALL")) {
+                    this._applyRequestFilters();
+                    return;
+                }
+            }
             this._applySearchVisibility();
             this._refreshRequestCounts();
         },
@@ -614,7 +700,7 @@ sap.ui.define([
                 .then(function (aRequests) {
                     var oCounts = { all: aRequests.length, pending: 0, approved: 0, declined: 0 };
                     aRequests.forEach(function (r) {
-                        var st = String(r.Status || "").toUpperCase();
+                        var st = normalizeStatusCode(r.Status, r.StatusText);
                         if (st === "P") { oCounts.pending++; }
                         else if (st === "C") { oCounts.approved++; }
                         else if (st === "N") { oCounts.declined++; }
@@ -622,6 +708,51 @@ sap.ui.define([
                     that.getView().getModel("shellModel").setProperty("/counts", oCounts);
                 })
                 .catch(function () { });
+        },
+
+        formatStatusText: function (sStatus, sStatusText) {
+            var st = normalizeStatusCode(sStatus, sStatusText);
+            if (st === "C") { return "Confirmed"; }
+            if (st === "N") { return "Not happening"; }
+            if (st === "P") { return "Pending"; }
+            return sStatusText || sStatus || "Pending";
+        },
+
+        formatStatusState: function (sStatus, sStatusText) {
+            var st = normalizeStatusCode(sStatus, sStatusText);
+            if (st === "C") { return "Success"; }
+            if (st === "N") { return "Error"; }
+            return "Warning";
+        },
+
+        formatStatusIcon: function (sStatus, sStatusText) {
+            var st = normalizeStatusCode(sStatus, sStatusText);
+            if (st === "C") { return "sap-icon://accept"; }
+            if (st === "N") { return "sap-icon://decline"; }
+            return "sap-icon://pending";
+        },
+
+        formatTargetAuthority: function (sTopic, sAuthorityRole) {
+            return resolveAuthorityRole(sTopic, sAuthorityRole);
+        },
+
+        formatCanDecide: function (bIsStudent, sUserRole, sStatus, sStatusText, sTopic, sAuthorityRole, vOpAllowed) {
+            if (bIsStudent) {
+                return false;
+            }
+            var st = normalizeStatusCode(sStatus, sStatusText);
+            if (st !== "P") {
+                return false;
+            }
+            if (vOpAllowed === false) {
+                return false;
+            }
+            if (vOpAllowed === true) {
+                return true;
+            }
+            // Fallback (e.g. mock data without __OperationControl) routes strictly by Topic -> AuthorityRole
+            var sTargetRole = resolveAuthorityRole(sTopic, sAuthorityRole);
+            return !!sTargetRole && sTargetRole === String(sUserRole || "").trim().toUpperCase();
         },
 
         onOpenClassicTable: function () {
