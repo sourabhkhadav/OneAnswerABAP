@@ -19,10 +19,10 @@ body, .sapUiBody {
 
 /* Central Responsive Content Container (Prevents overstretching on wide screens) */
 .zoaContentContainer {
-    max-width: 960px !important;
+    max-width: 1120px !important;
     margin: 0 auto !important;
     width: 100% !important;
-    padding: 1.25rem 1rem 3rem 1rem !important;
+    padding: 1.5rem 1.5rem 3rem 1.5rem !important;
     box-sizing: border-box !important;
 }
 
@@ -249,7 +249,7 @@ body, .sapUiBody {
    ══════════════════════════════════════════════════════════════════ */
 
 .zoaChatContainer {
-    max-width: 900px !important;
+    max-width: 1020px !important;
     margin: 0 auto !important;
     width: 100% !important;
 }

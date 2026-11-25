@@ -313,42 +313,42 @@ sap.ui.define([
         onOpenCreateDialog: function () {
             if (!this._oCreateDialog) {
                 var oView = this.getView();
+                var oFormVBox = new VBox({
+                    width: "100%",
+                    items: [
+                        new Label({ text: "Topic", required: true }),
+                        new Select("dlgTopicSelect", {
+                            width: "100%",
+                            items: [
+                                new Item({ key: "HOLIDAY", text: "Holiday (Decided by DIRECTOR)" }),
+                                new Item({ key: "EVENT", text: "College Event (Decided by HOD)" }),
+                                new Item({ key: "TRIP", text: "Class Trip (Decided by TEACHER)" })
+                            ]
+                        }),
+                        new Label({ text: "Title", required: true }).addStyleClass("sapUiSmallMarginTop"),
+                        new Input("dlgTitleInput", {
+                            placeholder: "e.g. Annual Sports Day or Local Holiday",
+                            width: "100%"
+                        }),
+                        new Label({ text: "Event Date", required: true }).addStyleClass("sapUiSmallMarginTop"),
+                        new DatePicker("dlgEventDatePicker", {
+                            valueFormat: "yyyy-MM-dd",
+                            displayFormat: "yyyy-MM-dd",
+                            width: "100%"
+                        }),
+                        new Label({ text: "Description / Reason" }).addStyleClass("sapUiSmallMarginTop"),
+                        new TextArea("dlgDescInput", {
+                            rows: 4,
+                            placeholder: "Provide brief description...",
+                            width: "100%"
+                        })
+                    ]
+                });
+
                 this._oCreateDialog = new Dialog({
                     title: "Create New Request",
-                    contentWidth: "420px",
-                    content: [
-                        new VBox({
-                            class: "sapUiSmallMargin",
-                            items: [
-                                new Label({ text: "Topic", required: true }),
-                                new Select("dlgTopicSelect", {
-                                    width: "100%",
-                                    items: [
-                                        new Item({ key: "HOLIDAY", text: "Holiday (Decided by DIRECTOR)" }),
-                                        new Item({ key: "EVENT", text: "College Event (Decided by HOD)" }),
-                                        new Item({ key: "TRIP", text: "Class Trip (Decided by TEACHER)" })
-                                    ]
-                                }),
-                                new Label({ text: "Title", required: true, class: "sapUiTinyMarginTop" }),
-                                new Input("dlgTitleInput", {
-                                    placeholder: "e.g. Annual Sports Day or Local Holiday",
-                                    width: "100%"
-                                }),
-                                new Label({ text: "Event Date", required: true, class: "sapUiTinyMarginTop" }),
-                                new DatePicker("dlgEventDatePicker", {
-                                    valueFormat: "yyyy-MM-dd",
-                                    displayFormat: "yyyy-MM-dd",
-                                    width: "100%"
-                                }),
-                                new Label({ text: "Description / Reason", class: "sapUiTinyMarginTop" }),
-                                new TextArea("dlgDescInput", {
-                                    rows: 3,
-                                    placeholder: "Provide brief description...",
-                                    width: "100%"
-                                })
-                            ]
-                        })
-                    ],
+                    contentWidth: "560px",
+                    content: [oFormVBox],
                     beginButton: new Button({
                         text: "Submit",
                         type: "Emphasized",
@@ -360,7 +360,7 @@ sap.ui.define([
                             this._oCreateDialog.close();
                         }.bind(this)
                     })
-                });
+                }).addStyleClass("sapUiContentPadding");
                 oView.addDependent(this._oCreateDialog);
             }
 
