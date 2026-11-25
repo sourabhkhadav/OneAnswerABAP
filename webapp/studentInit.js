@@ -75,7 +75,7 @@ sap.ui.define([
             oView.setModel(oODataModel);
             oView.setModel(oI18nModel, "i18n");
             oView.setModel(oDeviceModel, "device");
-            oView.placeAt("content");
+            oView.placeAt(document.getElementById("student-container") ? "student-container" : "content");
             // Force full height after rendering & attach top-right corner badge
             oView.addEventDelegate({
                 onAfterRendering: function () {
@@ -104,6 +104,7 @@ sap.ui.define([
                 return;
             }
             sessionStorage.setItem("zoa_auth_session", JSON.stringify(sess));
+            ensureStudentBar();
             bootStudentView();
         })
         .catch(function () {
