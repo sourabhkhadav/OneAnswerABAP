@@ -91,12 +91,16 @@ sap.ui.define([
         onInit: function () {
             var sUserId = "Student";
             var sRoleTitle = "Student Portal";
+            var sRole = "STUDENT";
+            var bIsStudent = true;
             try {
                 var rawSess = sessionStorage.getItem("zoa_auth_session");
                 if (rawSess) {
                     var oSess = JSON.parse(rawSess);
                     if (oSess.userId) { sUserId = oSess.userId; }
                     if (oSess.roleTitle) { sRoleTitle = oSess.roleTitle; }
+                    if (oSess.role) { sRole = String(oSess.role).toUpperCase(); }
+                    bIsStudent = oSess.isStudent !== undefined ? !!oSess.isStudent : (sRole === "STUDENT");
                 }
             } catch (e) { }
 
@@ -113,14 +117,34 @@ sap.ui.define([
             this.getView().setModel(new JSONModel({
                 alertCount: "",
                 userSubtitle: sRoleTitle.indexOf(sUserId) !== -1 ? sRoleTitle : (sRoleTitle + " (" + sUserId + ")"),
-                userId: sUserId
+                userId: sUserId,
+                role: sRole,
+                isStudent: bIsStudent,
+                statusFilter: "ALL",
+                typeFilter: "ALL",
+                searchQuery: "",
+                counts: { all: 0, pending: 0, approved: 0, declined: 0 }
             }), "shellModel");
 
-            // Setup polling for alerts every 30 seconds
+            if (!bIsStudent) {
+                var oTabBar = this.byId("mainTabBar");
+                if (oTabBar) {
+                    oTabBar.setSelectedKey("requests");
+                }
+            }
+
+            this._syncFilterButtonStyles();
+            this._refreshRequestCounts();
+
+            // Setup polling for alerts & live request counts every 30 seconds
             this._startAlertsPolling();
         },
 
         onLogoutPress: function () {
+            if (typeof window.zoaConfirmLogout === "function") {
+                window.zoaConfirmLogout();
+                return;
+            }
             sessionStorage.removeItem("zoa_auth_session");
             fetch("/auth/logout", { method: "POST", credentials: "same-origin" })
                 .catch(function () {})
@@ -154,6 +178,10 @@ sap.ui.define([
             if (this._oCreateDialog) {
                 this._oCreateDialog.destroy();
                 this._oCreateDialog = null;
+            }
+            if (this._oDecisionDialog) {
+                this._oDecisionDialog.destroy();
+                this._oDecisionDialog = null;
             }
         },
 
@@ -465,6 +493,242 @@ sap.ui.define([
             });
         },
 
+        onFilterEventsByTopic: function (oEvent) {
+            var sTopic = oEvent.getParameter("item").getKey();
+            var oEventsList = this.byId("eventsList");
+            if (!oEventsList || !oEventsList.getBinding("items")) {
+                return;
+            }
+            var aFilters = [new Filter("Status", FilterOperator.EQ, "C")];
+            if (sTopic && sTopic !== "ALL") {
+                aFilters.push(new Filter("Topic", FilterOperator.EQ, sTopic));
+            }
+            oEventsList.getBinding("items").filter(aFilters);
+        },
+
+        onSelectStatusFilter: function (sStatusKey) {
+            this.getView().getModel("shellModel").setProperty("/statusFilter", sStatusKey || "ALL");
+            this._syncFilterButtonStyles();
+            this._applyRequestFilters();
+        },
+
+        onSelectTypeFilter: function (sTypeKey) {
+            this.getView().getModel("shellModel").setProperty("/typeFilter", sTypeKey || "ALL");
+            this._syncFilterButtonStyles();
+            this._applyRequestFilters();
+        },
+
+        onSearchRequests: function (oEvent) {
+            var sVal = oEvent.getParameter("newValue");
+            if (sVal === undefined) {
+                sVal = oEvent.getParameter("query") || "";
+            }
+            this.getView().getModel("shellModel").setProperty("/searchQuery", String(sVal).trim());
+            this._applySearchVisibility();
+        },
+
+        onRequestsLoaded: function () {
+            this._applySearchVisibility();
+            this._refreshRequestCounts();
+        },
+
+        _syncFilterButtonStyles: function () {
+            var oModel = this.getView().getModel("shellModel");
+            if (!oModel) { return; }
+            var sStatus = oModel.getProperty("/statusFilter");
+            var sType = oModel.getProperty("/typeFilter");
+
+            var mStatusBtns = {
+                ALL: "btnStatusAll",
+                P: "btnStatusPending",
+                C: "btnStatusApproved",
+                N: "btnStatusDeclined"
+            };
+            Object.keys(mStatusBtns).forEach(function (k) {
+                var oBtn = this.byId(mStatusBtns[k]);
+                if (oBtn) {
+                    oBtn.toggleStyleClass("zoaStatusTabActive", k === sStatus);
+                }
+            }.bind(this));
+
+            var mTypeBtns = {
+                ALL: "btnTypeAll",
+                TRIP: "btnTypeTrip",
+                EVENT: "btnTypeEvent",
+                HOLIDAY: "btnTypeHoliday"
+            };
+            Object.keys(mTypeBtns).forEach(function (k) {
+                var oBtn = this.byId(mTypeBtns[k]);
+                if (oBtn) {
+                    oBtn.toggleStyleClass("zoaTypePillActive", k === sType);
+                }
+            }.bind(this));
+        },
+
+        _applyRequestFilters: function () {
+            var oRequestsList = this.byId("requestsList");
+            if (!oRequestsList || !oRequestsList.getBinding("items")) {
+                return;
+            }
+            var oModel = this.getView().getModel("shellModel");
+            var sStatus = oModel.getProperty("/statusFilter");
+            var sType = oModel.getProperty("/typeFilter");
+            var aFilters = [];
+            if (sStatus && sStatus !== "ALL") {
+                aFilters.push(new Filter("Status", FilterOperator.EQ, sStatus));
+            }
+            if (sType && sType !== "ALL") {
+                aFilters.push(new Filter("Topic", FilterOperator.EQ, sType));
+            }
+            oRequestsList.getBinding("items").filter(aFilters);
+        },
+
+        _applySearchVisibility: function () {
+            var oRequestsList = this.byId("requestsList");
+            var oModel = this.getView().getModel("shellModel");
+            if (!oRequestsList || !oModel) {
+                return;
+            }
+            var sQuery = String(oModel.getProperty("/searchQuery") || "").toLowerCase();
+            oRequestsList.getItems().forEach(function (oItem) {
+                if (!sQuery) {
+                    oItem.setVisible(true);
+                    return;
+                }
+                var oCtx = oItem.getBindingContext();
+                var oObj = oCtx ? oCtx.getObject() : {};
+                var sHaystack = [
+                    oObj.Title,
+                    oObj.CreatedBy,
+                    oObj.Topic,
+                    oObj.Description,
+                    oObj.AuthorityRole
+                ].join(" ").toLowerCase();
+                oItem.setVisible(sHaystack.indexOf(sQuery) !== -1);
+            });
+        },
+
+        _refreshRequestCounts: function () {
+            var that = this;
+            this._fetchODataEntity("/" + ENTITY_SETS.request)
+                .then(function (aRequests) {
+                    var oCounts = { all: aRequests.length, pending: 0, approved: 0, declined: 0 };
+                    aRequests.forEach(function (r) {
+                        var st = String(r.Status || "").toUpperCase();
+                        if (st === "P") { oCounts.pending++; }
+                        else if (st === "C") { oCounts.approved++; }
+                        else if (st === "N") { oCounts.declined++; }
+                    });
+                    that.getView().getModel("shellModel").setProperty("/counts", oCounts);
+                })
+                .catch(function () { });
+        },
+
+        onOpenClassicTable: function () {
+            window.location.href = "fiori-table.html";
+        },
+
+        onConfirmRequestPress: function (oEvent) {
+            var oContext = oEvent.getSource().getBindingContext();
+            if (!oContext) { return; }
+            this._openDecisionDialog(oContext, true);
+        },
+
+        onRejectRequestPress: function (oEvent) {
+            var oContext = oEvent.getSource().getBindingContext();
+            if (!oContext) { return; }
+            this._openDecisionDialog(oContext, false);
+        },
+
+        _openDecisionDialog: function (oContext, bConfirm) {
+            if (this.getView().getModel("shellModel").getProperty("/isStudent")) {
+                MessageBox.error("Students are not authorized to approve or reject requests.");
+                return;
+            }
+            this._oPendingDecisionContext = oContext;
+            this._bPendingDecisionConfirm = bConfirm;
+
+            if (!this._oDecisionDialog) {
+                var oReasonBox = new VBox({
+                    width: "100%",
+                    items: [
+                        new Label({ text: "Decision Reason", required: true }),
+                        new TextArea("dlgDecisionReasonInput", {
+                            rows: 3,
+                            width: "100%",
+                            placeholder: "Enter reason for your decision..."
+                        })
+                    ]
+                });
+                this._oDecisionDialog = new Dialog({
+                    title: "Decision",
+                    contentWidth: "480px",
+                    content: [oReasonBox],
+                    beginButton: new Button("dlgDecisionSubmitBtn", {
+                        text: "Confirm",
+                        type: "Emphasized",
+                        press: function () {
+                            var sReason = sap.ui.getCore().byId("dlgDecisionReasonInput").getValue().trim();
+                            if (!sReason) {
+                                MessageBox.warning("Please enter a decision reason.");
+                                return;
+                            }
+                            this._oDecisionDialog.close();
+                            this._executeDecisionAction(
+                                this._oPendingDecisionContext,
+                                this._bPendingDecisionConfirm,
+                                sReason
+                            );
+                        }.bind(this)
+                    }),
+                    endButton: new Button({
+                        text: "Cancel",
+                        press: function () {
+                            this._oDecisionDialog.close();
+                        }.bind(this)
+                    })
+                }).addStyleClass("sapUiContentPadding");
+                this.getView().addDependent(this._oDecisionDialog);
+            }
+
+            this._oDecisionDialog.setTitle(bConfirm ? "Confirm Request" : "Reject Request (Not happening)");
+            var oSubmitBtn = sap.ui.getCore().byId("dlgDecisionSubmitBtn");
+            if (oSubmitBtn) {
+                oSubmitBtn.setText(bConfirm ? "Confirm" : "Not happening");
+                oSubmitBtn.setType(bConfirm ? "Accept" : "Reject");
+            }
+            var oReasonInp = sap.ui.getCore().byId("dlgDecisionReasonInput");
+            if (oReasonInp) {
+                oReasonInp.setValue("");
+            }
+            this._oDecisionDialog.open();
+        },
+
+        _executeDecisionAction: function (oContext, bConfirm, sReason) {
+            var oModel = this.getView().getModel();
+            if (!oModel || !oContext) {
+                return;
+            }
+            var sActionName = bConfirm
+                ? "com.sap.gateway.srvd.zoa_ui_oa_request.v0001.confirmRequest(...)"
+                : "com.sap.gateway.srvd.zoa_ui_oa_request.v0001.rejectRequest(...)";
+            var oAction = oModel.bindContext(sActionName, oContext);
+            oAction.setParameter("Reason", sReason);
+
+            var that = this;
+            sap.ui.core.BusyIndicator.show(0);
+            oAction.execute().then(function () {
+                sap.ui.core.BusyIndicator.hide();
+                MessageToast.show(bConfirm ? "Request confirmed." : "Request marked as Not happening.");
+                that._refreshAllLists();
+            }).catch(function (oError) {
+                sap.ui.core.BusyIndicator.hide();
+                var sDetail = that._formatError(oError);
+                console.error("[OneAnswer] Decision action failed:", oError);
+                MessageBox.error("Failed to update request in SAP: " + sDetail);
+            });
+        },
+
         deleteRequest: function (oContext) {
             var that = this;
             sap.ui.core.BusyIndicator.show(0);
@@ -500,6 +764,7 @@ sap.ui.define([
                 oRequestsList.getBinding("items").refresh();
             }
             this._refreshAlertsCount();
+            this._refreshRequestCounts();
         },
 
         // ─────────────────────────────────────────────────────────────
@@ -532,6 +797,23 @@ sap.ui.define([
             this.getView().getModel("shellModel").setProperty("/alertCount", sNew);
             var oTab = this.byId("tabAlerts");
             if (oTab) { oTab.setCount(sNew); }
+        },
+
+        onDismissAllAlerts: function () {
+            var oAlertsList = this.byId("alertsList");
+            if (!oAlertsList) { return; }
+            var aItems = oAlertsList.getItems().slice();
+            aItems.forEach(function (oItem) {
+                var oCtx = oItem.getBindingContext();
+                if (oCtx) {
+                    oCtx.delete("$auto").catch(function () { });
+                }
+                oAlertsList.removeItem(oItem);
+            });
+            this.getView().getModel("shellModel").setProperty("/alertCount", "");
+            var oTab = this.byId("tabAlerts");
+            if (oTab) { oTab.setCount(""); }
+            MessageToast.show("All alerts dismissed.");
         },
 
         onNotificationsPress: function () {

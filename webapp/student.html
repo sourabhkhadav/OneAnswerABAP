@@ -35,6 +35,10 @@
 
     <script>
         function zoaStudentLogout() {
+            if (typeof window.zoaConfirmLogout === "function") {
+                window.zoaConfirmLogout();
+                return;
+            }
             sessionStorage.removeItem("zoa_auth_session");
             fetch("/auth/logout", { method: "POST", credentials: "same-origin" })
                 .catch(function () {})

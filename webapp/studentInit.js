@@ -12,8 +12,88 @@ sap.ui.define([
         includeStylesheet(sap.ui.require.toUrl("zoa/zoarequestui/css/style.css"));
     });
 
-    // Ensure student corner indicator (Role + ID + Logout) floats at top-right
+    function performServerLogout() {
+        sessionStorage.removeItem("zoa_auth_session");
+        fetch("/auth/logout", { method: "POST", credentials: "same-origin" })
+            .catch(function () {})
+            .finally(function () {
+                window.location.href = "login.html";
+            });
+    }
+
+    function escapeHtml(str) {
+        return String(str || "")
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;");
+    }
+
+    window.zoaConfirmLogout = function () {
+        var existingModal = document.getElementById("zoa-logout-modal");
+        if (existingModal) {
+            existingModal.remove();
+        }
+        var role = "STUDENT";
+        var uid = "";
+        try {
+            var raw = sessionStorage.getItem("zoa_auth_session");
+            if (raw) {
+                var sess = JSON.parse(raw);
+                role = (sess.role || "STUDENT").toUpperCase();
+                uid = (sess.userId || "").toUpperCase();
+            }
+        } catch (e) {}
+
+        var roleLabel = role.charAt(0) + role.slice(1).toLowerCase();
+        var userDisplay = role + (uid ? " (" + uid + ")" : "");
+
+        var backdrop = document.createElement("div");
+        backdrop.id = "zoa-logout-modal";
+        backdrop.className = "zoaLogoutBackdrop";
+        backdrop.innerHTML =
+            '<div class="zoaLogoutCard" role="dialog" aria-modal="true">' +
+                '<div class="zoaLogoutIconWrap">&#8618;</div>' +
+                '<h3 class="zoaLogoutTitle">Sign out of ' + escapeHtml(roleLabel) + ' Portal?</h3>' +
+                '<p class="zoaLogoutDesc">You are currently signed in as <strong>' + escapeHtml(userDisplay) + '</strong>.</p>' +
+                '<div class="zoaLogoutActions">' +
+                    '<button type="button" id="zoa-stay-btn" class="zoaStayBtn">Stay Signed In</button>' +
+                    '<button type="button" id="zoa-yes-logout-btn" class="zoaConfirmLogoutBtn">Yes, Logout</button>' +
+                '</div>' +
+            '</div>';
+        document.body.appendChild(backdrop);
+
+        backdrop.addEventListener("click", function (ev) {
+            if (ev.target === backdrop) {
+                backdrop.remove();
+            }
+        });
+        document.getElementById("zoa-stay-btn").addEventListener("click", function () {
+            backdrop.remove();
+        });
+        document.getElementById("zoa-yes-logout-btn").addEventListener("click", function () {
+            performServerLogout();
+        });
+    };
+
+    // Ensure corner indicator (Role + ID + Logout) floats at top-right
     function ensureStudentBar() {
+        var authBar = document.getElementById("zoa-authority-bar");
+        if (authBar) {
+            var rawAuth = sessionStorage.getItem("zoa_auth_session");
+            if (rawAuth) {
+                try {
+                    var authSess = JSON.parse(rawAuth);
+                    var authEl = document.getElementById("zoa-user-name");
+                    if (authEl) {
+                        var authRole = (authSess.role || "AUTHORITY").toUpperCase();
+                        var authUid = (authSess.userId || "").toUpperCase();
+                        authEl.innerText = authRole + (authUid ? " (" + authUid + ")" : "");
+                    }
+                } catch (e) {}
+            }
+            return;
+        }
         var existing = document.getElementById("zoa-student-bar");
         if (!existing) {
             var bar = document.createElement("div");
@@ -27,12 +107,7 @@ sap.ui.define([
             var logoutLink = document.getElementById("zoa-student-logout");
             if (logoutLink) {
                 logoutLink.addEventListener("click", function () {
-                    sessionStorage.removeItem("zoa_auth_session");
-                    fetch("/auth/logout", { method: "POST", credentials: "same-origin" })
-                        .catch(function () {})
-                        .finally(function () {
-                            window.location.href = "login.html";
-                        });
+                    window.zoaConfirmLogout();
                 });
             }
         }
@@ -53,8 +128,8 @@ sap.ui.define([
     function bootStudentView() {
         var oI18nModel = new ResourceModel({
             bundleName: "zoa.zoarequestui.i18n.i18n",
-            supportedLocales: ["en"],
-            fallbackLocale: "en"
+            supportedLocales: [""],
+            fallbackLocale: ""
         });
 
         var oODataModel = new ODataModel({
@@ -75,7 +150,10 @@ sap.ui.define([
             oView.setModel(oODataModel);
             oView.setModel(oI18nModel, "i18n");
             oView.setModel(oDeviceModel, "device");
-            oView.placeAt(document.getElementById("student-container") ? "student-container" : "content");
+            var sTargetId = document.getElementById("app-container")
+                ? "app-container"
+                : (document.getElementById("student-container") ? "student-container" : "content");
+            oView.placeAt(sTargetId);
             // Force full height after rendering & attach top-right corner badge
             oView.addEventDelegate({
                 onAfterRendering: function () {
