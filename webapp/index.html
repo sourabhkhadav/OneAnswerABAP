@@ -6,13 +6,13 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <title>One Answer Requests</title>
     <style>
-        html, body, #container, #container-uiarea {
+        html, body, body > div, #container, #container-uiarea {
             height: 100%;
             margin: 0;
             padding: 0;
         }
 
-        #zoa-user-corner {
+        header#zoa-user-corner {
             position: fixed;
             top: 10px;
             right: 16px;
@@ -32,12 +32,12 @@
             color: #1E293B;
         }
 
-        #zoa-user-corner a {
+        header#zoa-user-corner a {
             text-decoration: none;
             font-weight: 500;
         }
 
-        #zoa-user-corner a:hover {
+        header#zoa-user-corner a:hover {
             text-decoration: underline;
         }
     </style>
@@ -58,15 +58,15 @@
 </head>
 <body class="sapUiBody sapUiSizeCompact" id="content">
 
-    <!-- Minimal Top Right User & Role Indicator (No blocking box) -->
-    <div id="zoa-user-corner">
+    <!-- Minimal Top Right User & Role Indicator (Header tag, not div, so body > div does not stretch it) -->
+    <header id="zoa-user-corner">
         <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#10B981;"></span>
         <span id="zoa-user-name" style="font-weight:600; color:#0F172A;">HOD (S23AH18)</span>
         <span style="color:#CBD5E1;">|</span>
         <a href="student.html" style="color:#0070F2;">🎓 Student Portal</a>
         <span style="color:#CBD5E1;">|</span>
         <a href="javascript:void(0)" onclick="sessionStorage.removeItem('zoa_auth_session'); window.location.href='login.html'" style="color:#DC2626;">🚪 Logout</a>
-    </div>
+    </header>
 
     <script>
         (function () {
