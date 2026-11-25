@@ -210,7 +210,7 @@
                         type="text" 
                         id="inpUser" 
                         class="form-input" 
-                        placeholder="e.g. S23AH63 or Student Roll No" 
+                        placeholder="e.g. S23AH63 or S23AH11" 
                         required 
                         autofocus
                         autocomplete="username"
@@ -232,7 +232,7 @@
 
             <div class="hint-bar">
                 <strong>SAP Authority:</strong> S23AH56 (Teacher), S23AH63 (HOD), S23AH18 (Director)<br>
-                <strong>Students:</strong> Enter Roll No or Student ID
+                <strong>Students:</strong> S23AH&lt;number&gt; (e.g. S23AH11)
             </div>
 
             <div class="dialog-footer">
@@ -286,7 +286,7 @@
                     // Fallback when running under mock server without auth middleware
                     const upperUser = rawUser.toUpperCase();
                     let role = "STUDENT";
-                    let roleTitle = "Student (" + rawUser + ")";
+                    let roleTitle = "Student (" + upperUser + ")";
                     let redirectUrl = "student.html";
                     if (upperUser === "S23AH56") {
                         role = "TEACHER";
@@ -300,10 +300,19 @@
                         role = "DIRECTOR";
                         roleTitle = "Director (S23AH18)";
                         redirectUrl = "index.html";
+                    } else if (!/^S23AH\d+$/i.test(upperUser)) {
+                        errEl.innerText = "Invalid Student ID format. Use S23AH followed by numbers (e.g. S23AH11).";
+                        errEl.style.display = "block";
+                        return;
+                    } else if (rawPass !== "hana@123") {
+                        errEl.innerText = "Invalid password. Please try again.";
+                        errEl.style.display = "block";
+                        passInp.focus();
+                        return;
                     }
                     sessionStorage.setItem("zoa_auth_session", JSON.stringify({
                         role: role,
-                        userId: rawUser,
+                        userId: upperUser,
                         roleTitle: roleTitle,
                         isStudent: role === "STUDENT",
                         loginTime: new Date().toLocaleTimeString()
