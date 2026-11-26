@@ -158,9 +158,9 @@ sap.ui.define([
         return false;
     }
 
-    function isApprovedForAuthorityRole(oReq, bIsStudent, sViewerRole) {
+    function isVisibleInApprovedTab(oReq, bIsStudent, sViewerRole, sViewerUserId) {
         if (bIsStudent) {
-            return true;
+            return isRequestCreator(oReq, sViewerUserId);
         }
         var sRole = String(sViewerRole || "").trim().toUpperCase();
         if (!sRole) {
@@ -751,7 +751,7 @@ sap.ui.define([
                     oItem.setVisible(false);
                     return;
                 }
-                if (sStatusFilter === "C" && !isApprovedForAuthorityRole(oObj, bIsStudent, sViewerRole)) {
+                if (sStatusFilter === "C" && !isVisibleInApprovedTab(oObj, bIsStudent, sViewerRole, sViewerUserId)) {
                     oItem.setVisible(false);
                     return;
                 }
@@ -789,7 +789,7 @@ sap.ui.define([
                         if (st === "P") {
                             oCounts.pending++;
                         } else if (st === "C") {
-                            if (isApprovedForAuthorityRole(r, bIsStudent, sViewerRole)) {
+                            if (isVisibleInApprovedTab(r, bIsStudent, sViewerRole, sViewerUserId)) {
                                 oCounts.approved++;
                             }
                         } else if (st === "N") {
