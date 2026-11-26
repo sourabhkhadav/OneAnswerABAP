@@ -128,6 +128,65 @@ sap.ui.define([
         return m ? String(m[1]).trim().toUpperCase() : "";
     }
 
+    function normalizeDateKey(vDate) {
+        if (!vDate) {
+            return "";
+        }
+        if (vDate instanceof Date) {
+            return isNaN(vDate.getTime()) ? "" : vDate.toISOString().slice(0, 10);
+        }
+        var sRaw = String(vDate).trim();
+        var m = sRaw.match(/^(\d{4}-\d{2}-\d{2})/);
+        if (m) {
+            return m[1];
+        }
+        var oParsed = new Date(sRaw);
+        return isNaN(oParsed.getTime()) ? sRaw : oParsed.toISOString().slice(0, 10);
+    }
+
+    function normalizeTextKey(vText) {
+        return String(vText || "").trim().toLowerCase().replace(/\s+/g, " ");
+    }
+
+    function isDuplicateCandidate(oExisting, sNormDate, sNormTopic, sNormTitle) {
+        if (!oExisting || (oExisting.IsActiveEntity === false && !oExisting.RequestUuid)) {
+            return false;
+        }
+        var sExistingDate = normalizeDateKey(oExisting.EventDate);
+        var sExistingTopic = String(oExisting.Topic || "").trim().toUpperCase();
+        if (!sExistingDate || sExistingDate !== sNormDate || sExistingTopic !== sNormTopic) {
+            return false;
+        }
+        if (sNormTopic === "HOLIDAY") {
+            return true;
+        }
+        return normalizeTextKey(oExisting.Title) === sNormTitle;
+    }
+
+    function deduplicateRequestObjects(aRequests) {
+        var oSeenIds = {};
+        var oSeenContent = {};
+        return (aRequests || []).filter(function (oReq) {
+            if (!oReq) {
+                return false;
+            }
+            var sId = oReq.RequestUuid ? String(oReq.RequestUuid).trim().toLowerCase() : "";
+            if (sId && oSeenIds[sId]) {
+                return false;
+            }
+            var sDate = normalizeDateKey(oReq.EventDate);
+            var sTopic = String(oReq.Topic || "").trim().toUpperCase();
+            var sTitle = normalizeTextKey(oReq.Title);
+            var sContentKey = (sDate && sTopic && sTitle) ? (sDate + "|" + sTopic + "|" + sTitle) : "";
+            if (sContentKey && oSeenContent[sContentKey]) {
+                return false;
+            }
+            if (sId) { oSeenIds[sId] = true; }
+            if (sContentKey) { oSeenContent[sContentKey] = true; }
+            return true;
+        });
+    }
+
     function isRequestCreator(oReq, sViewerUserId) {
         var sViewer = String(sViewerUserId || "").trim().toUpperCase();
         if (!sViewer) {
@@ -333,7 +392,7 @@ sap.ui.define([
                     return { _error: that._formatError(err) };
                 })
             ]).then(function (aResults) {
-                var aRequests = Array.isArray(aResults[0]) ? aResults[0] : [];
+                var aRequests = deduplicateRequestObjects(Array.isArray(aResults[0]) ? aResults[0] : []);
                 var aAlerts = Array.isArray(aResults[1]) ? aResults[1] : [];
                 var aEvents = Array.isArray(aResults[2]) ? aResults[2] : [];
                 var aAuthorities = Array.isArray(aResults[3]) ? aResults[3] : [];
@@ -405,8 +464,16 @@ sap.ui.define([
         },
 
         _formatError: function (oError) {
-            var sMsg = (oError && oError.message) || String(oError);
-            var iStatus = (oError && oError.status) || 0;
+            var sDetailMsg = "";
+            if (oError && oError.error) {
+                if (Array.isArray(oError.error.details) && oError.error.details.length > 0 && oError.error.details[0].message) {
+                    sDetailMsg = oError.error.details[0].message;
+                } else if (oError.error.message) {
+                    sDetailMsg = oError.error.message;
+                }
+            }
+            var sMsg = sDetailMsg || (oError && oError.message) || String(oError || "");
+            var iStatus = (oError && (oError.status || oError.statusCode)) || 0;
             if (sMsg.indexOf("401") !== -1 || iStatus === 401) {
                 return "SAP Authentication Required (HTTP 401). Please verify credentials in .env or login prompt.";
             }
@@ -505,7 +572,46 @@ sap.ui.define([
             this._oCreateDialog.open();
         },
 
+        _getLoadedRequestRecords: function () {
+            var aRecords = [];
+            ["requestsList", "eventsList"].forEach(function (sListId) {
+                var oList = this.byId(sListId);
+                if (!oList) {
+                    return;
+                }
+                oList.getItems().forEach(function (oItem) {
+                    var oCtx = oItem.getBindingContext();
+                    var oObj = oCtx && oCtx.getObject();
+                    if (oObj) {
+                        aRecords.push(oObj);
+                    }
+                });
+            }.bind(this));
+            return aRecords;
+        },
+
+        _findDuplicateRequest: function (sTopic, sEventDate, sTitle) {
+            var sNormTopic = String(sTopic || "EVENT").trim().toUpperCase();
+            var sNormDate = normalizeDateKey(sEventDate);
+            var sNormTitle = normalizeTextKey(sTitle);
+            var aLocal = this._getLoadedRequestRecords();
+
+            return this._fetchODataEntity("/" + ENTITY_SETS.request)
+                .catch(function () {
+                    return [];
+                })
+                .then(function (aRemote) {
+                    var aCombined = deduplicateRequestObjects(aLocal.concat(aRemote || []));
+                    return aCombined.find(function (oExisting) {
+                        return isDuplicateCandidate(oExisting, sNormDate, sNormTopic, sNormTitle);
+                    }) || null;
+                });
+        },
+
         onCreateRequestSubmit: function () {
+            if (this._bSubmittingRequest) {
+                return;
+            }
             var sTopic = sap.ui.getCore().byId("dlgTopicSelect").getSelectedKey();
             var sTitle = sap.ui.getCore().byId("dlgTitleInput").getValue().trim();
             var sDate = sap.ui.getCore().byId("dlgEventDatePicker").getValue();
@@ -516,7 +622,7 @@ sap.ui.define([
                 return;
             }
 
-            this._oCreateDialog.close();
+            // Wait for validation and backend save BEFORE closing the modal or refreshing UI lists
             this.createRequest({
                 Topic: sTopic,
                 Title: sTitle,
@@ -526,21 +632,27 @@ sap.ui.define([
         },
 
         /**
-         * Create a new student request in SAP RAP database.
-         * Supports draft activation for RAP behavior definitions.
+         * Create a new request in SAP RAP database.
+         * Validates duplicates beforehand, waits for backend confirmation,
+         * and cleans up any failed/rejected context so duplicates never render.
          */
         createRequest: function (oData) {
             var that = this;
             var oModel = this.getView().getModel();
             if (!oModel) {
                 MessageBox.error("OData model not connected.");
-                return;
+                return Promise.resolve(false);
+            }
+            if (this._bSubmittingRequest) {
+                return Promise.resolve(false);
             }
 
             var oShellModel = this.getView().getModel("shellModel");
             var bIsStudent = oShellModel && oShellModel.getProperty("/isStudent");
             var sUserId = (oShellModel && oShellModel.getProperty("/userId")) || "";
             var sTopic = String(oData.Topic || "EVENT").trim().toUpperCase();
+            var sTitle = String(oData.Title || "").trim();
+            var sEventDate = normalizeDateKey(oData.EventDate);
             var sDescription = String(oData.Description || "").trim();
 
             if (bIsStudent && sUserId) {
@@ -553,53 +665,112 @@ sap.ui.define([
                 }
             }
 
-            var oListBinding = oModel.bindList("/" + ENTITY_SETS.request, null, null, null, {
-                $$updateGroupId: "$auto"
-            });
-
-            var oContext = oListBinding.create({
-                Topic: sTopic,
-                Title: oData.Title,
-                EventDate: oData.EventDate,
-                Description: sDescription
-            });
-
+            this._bSubmittingRequest = true;
+            if (this._oCreateDialog && this._oCreateDialog.getBeginButton()) {
+                this._oCreateDialog.getBeginButton().setEnabled(false);
+            }
             sap.ui.core.BusyIndicator.show(0);
 
-            oModel.submitBatch("$auto")
-                .then(function () {
-                    return oContext.created();
-                })
-                .then(function () {
-                    var oCreatedObj = oContext.getObject() || {};
-                    if (oCreatedObj.IsActiveEntity === true) {
-                        return oCreatedObj;
-                    }
-                    // Activate RAP draft so the request becomes visible in Authority queues
-                    var oAction = oModel.bindContext(
-                        "com.sap.gateway.srvd.zoa_ui_oa_request.v0001.Activate(...)",
-                        oContext
-                    );
-                    return oAction.execute().then(function () {
-                        return oContext.requestObject().catch(function () {
-                            return oContext.getObject() || {};
-                        });
+            var oContext = null;
+            var sGroupId = "zoaCreateGroup";
+            var fnResetSubmitState = function () {
+                that._bSubmittingRequest = false;
+                sap.ui.core.BusyIndicator.hide();
+                if (that._oCreateDialog && that._oCreateDialog.getBeginButton()) {
+                    that._oCreateDialog.getBeginButton().setEnabled(true);
+                }
+            };
+            var fnCleanupFailedContext = function () {
+                if (!oContext) {
+                    return Promise.resolve();
+                }
+                var oCtxToDelete = oContext;
+                oContext = null;
+                return Promise.resolve()
+                    .then(function () {
+                        return oCtxToDelete.delete(sGroupId);
+                    })
+                    .catch(function () {
+                        if (typeof oCtxToDelete.destroy === "function") {
+                            oCtxToDelete.destroy();
+                        }
                     });
+            };
+
+            return this._findDuplicateRequest(sTopic, sEventDate, sTitle)
+                .then(function (oDuplicate) {
+                    if (oDuplicate) {
+                        var sDupMsg = sTopic === "HOLIDAY"
+                            ? ("Duplicate Holiday: A Holiday request for " + sEventDate + " already exists.")
+                            : ("Duplicate Request: A " + sTopic + " titled \"" + sTitle + "\" on " + sEventDate + " already exists.");
+                        var oDupErr = new Error(sDupMsg);
+                        oDupErr._isDuplicateValidation = true;
+                        throw oDupErr;
+                    }
+
+                    var oListBinding = oModel.bindList("/" + ENTITY_SETS.request, null, null, null, {
+                        $$updateGroupId: sGroupId
+                    });
+
+                    oContext = oListBinding.create({
+                        Topic: sTopic,
+                        Title: sTitle,
+                        EventDate: sEventDate,
+                        Description: sDescription
+                    }, true);
+
+                    return oModel.submitBatch(sGroupId)
+                        .then(function () {
+                            return oContext.created();
+                        })
+                        .then(function () {
+                            var oCreatedObj = oContext.getObject() || {};
+                            if (oCreatedObj.error) {
+                                throw new Error(oCreatedObj.error.message || "Request rejected by backend.");
+                            }
+                            if (oCreatedObj.IsActiveEntity === true) {
+                                return oCreatedObj;
+                            }
+                            // Activate RAP draft so SAP validates and commits the active record
+                            var oAction = oModel.bindContext(
+                                "com.sap.gateway.srvd.zoa_ui_oa_request.v0001.Activate(...)",
+                                oContext
+                            );
+                            return oAction.execute().then(function () {
+                                return oContext.requestObject().catch(function () {
+                                    return oContext.getObject() || {};
+                                });
+                            });
+                        });
                 })
                 .then(function (oSavedObj) {
-                    sap.ui.core.BusyIndicator.hide();
+                    if (!oSavedObj || oSavedObj.error || oSavedObj.ok === false) {
+                        throw new Error((oSavedObj && ((oSavedObj.error && oSavedObj.error.message) || oSavedObj.message)) || "Request was rejected by SAP.");
+                    }
+                    fnResetSubmitState();
+                    if (that._oCreateDialog && that._oCreateDialog.isOpen()) {
+                        that._oCreateDialog.close();
+                    }
                     var sSavedStatus = normalizeStatusCode(oSavedObj && oSavedObj.Status, oSavedObj && oSavedObj.StatusText);
                     if (bIsStudent && sSavedStatus !== "P") {
                         console.warn("[OneAnswer] Student request did not land in Pending state (check SAP transport user in .env):", oSavedObj);
                     }
                     MessageToast.show("Request successfully created in SAP database!");
                     that._refreshAllLists();
+                    return true;
                 })
                 .catch(function (oError) {
-                    sap.ui.core.BusyIndicator.hide();
-                    var sDetail = that._formatError(oError);
-                    console.error("[OneAnswer] Create request failed:", oError);
-                    MessageBox.error("Failed to create request in SAP: " + sDetail);
+                    return fnCleanupFailedContext().then(function () {
+                        fnResetSubmitState();
+                        var sDetail = that._formatError(oError);
+                        console.error("[OneAnswer] Create request aborted:", oError);
+                        if (oError && oError._isDuplicateValidation) {
+                            MessageBox.error(sDetail, { title: "Duplicate Request Blocked" });
+                        } else {
+                            MessageBox.error("Failed to create request in SAP: " + sDetail);
+                        }
+                        return false;
+                    });
                 });
         },
 
@@ -629,6 +800,32 @@ sap.ui.define([
                         that.deleteRequest(oContext);
                     }
                 }
+            });
+        },
+
+        onEventsLoaded: function () {
+            var oEventsList = this.byId("eventsList");
+            if (!oEventsList) {
+                return;
+            }
+            var oSeenIds = {};
+            var oSeenContent = {};
+            oEventsList.getItems().forEach(function (oItem) {
+                var oCtx = oItem.getBindingContext();
+                var oObj = oCtx ? oCtx.getObject() : {};
+                var sId = oObj && oObj.RequestUuid ? String(oObj.RequestUuid).trim().toLowerCase() : "";
+                var sDate = normalizeDateKey(oObj && oObj.EventDate);
+                var sTopic = String((oObj && oObj.Topic) || "").trim().toUpperCase();
+                var sTitle = normalizeTextKey(oObj && oObj.Title);
+                var sContentKey = (sDate && sTopic && sTitle) ? (sDate + "|" + sTopic + "|" + sTitle) : "";
+
+                if ((sId && oSeenIds[sId]) || (sContentKey && oSeenContent[sContentKey])) {
+                    oItem.setVisible(false);
+                    return;
+                }
+                if (sId) { oSeenIds[sId] = true; }
+                if (sContentKey) { oSeenContent[sContentKey] = true; }
+                oItem.setVisible(true);
             });
         },
 
@@ -744,6 +941,8 @@ sap.ui.define([
             var sViewerUserId = oModel.getProperty("/userId");
             var sStatusFilter = String(oModel.getProperty("/statusFilter") || "ALL").trim().toUpperCase();
             var sQuery = String(oModel.getProperty("/searchQuery") || "").toLowerCase();
+            var oSeenIds = {};
+            var oSeenContent = {};
             oRequestsList.getItems().forEach(function (oItem) {
                 var oCtx = oItem.getBindingContext();
                 var oObj = oCtx ? oCtx.getObject() : {};
@@ -755,6 +954,17 @@ sap.ui.define([
                     oItem.setVisible(false);
                     return;
                 }
+                var sId = oObj && oObj.RequestUuid ? String(oObj.RequestUuid).trim().toLowerCase() : "";
+                var sDate = normalizeDateKey(oObj && oObj.EventDate);
+                var sTopic = String((oObj && oObj.Topic) || "").trim().toUpperCase();
+                var sTitle = normalizeTextKey(oObj && oObj.Title);
+                var sContentKey = (sDate && sTopic && sTitle) ? (sDate + "|" + sTopic + "|" + sTitle) : "";
+                if ((sId && oSeenIds[sId]) || (sContentKey && oSeenContent[sContentKey])) {
+                    oItem.setVisible(false);
+                    return;
+                }
+                if (sId) { oSeenIds[sId] = true; }
+                if (sContentKey) { oSeenContent[sContentKey] = true; }
                 if (!sQuery) {
                     oItem.setVisible(true);
                     return;
@@ -779,7 +989,7 @@ sap.ui.define([
                     var sViewerRole = oModel ? oModel.getProperty("/role") : "STUDENT";
                     var sViewerUserId = oModel ? oModel.getProperty("/userId") : "";
 
-                    var aVisible = aRequests.filter(function (r) {
+                    var aVisible = deduplicateRequestObjects(aRequests).filter(function (r) {
                         return canViewRequest(r, bIsStudent, sViewerRole, sViewerUserId);
                     });
 
