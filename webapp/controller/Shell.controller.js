@@ -799,6 +799,13 @@ sap.ui.define([
             return "sap-icon://pending";
         },
 
+        formatStatusCssKey: function (sStatus, sStatusText) {
+            var st = normalizeStatusCode(sStatus, sStatusText);
+            if (st === "C") { return "confirmed"; }
+            if (st === "N") { return "rejected"; }
+            return "pending";
+        },
+
         formatTargetAuthority: function (sTopic, sAuthorityRole) {
             return resolveAuthorityRole(sTopic, sAuthorityRole);
         },
@@ -842,6 +849,15 @@ sap.ui.define([
 
         formatCleanDescription: function (sDescription) {
             return String(sDescription || "").replace(/^\[Student:\s*[^\]]+\]\s*/i, "").trim();
+        },
+
+        formatEventMeta: function (sAuthorityRole, sDecisionReason) {
+            var aParts = [];
+            var sRole = String(sAuthorityRole || "").trim().toUpperCase();
+            if (sRole) { aParts.push("Approved by " + sRole); }
+            var sReason = String(sDecisionReason || "").trim();
+            if (sReason) { aParts.push(sReason); }
+            return aParts.join(" · ");
         },
 
         formatCardMeta: function (sEventDate, sTopic, sAuthorityRole, sDecideBy, sStatus, sStatusText, sCreatedBy, sDescription, bIsStudent) {

@@ -69,8 +69,11 @@
                                     busyIndicatorDelay="0"
                                     showSeparators="None">
                                     <CustomListItem class="zoaCardItem">
+                                        <customData>
+                                            <core:CustomData key="status" value="confirmed" writeToDom="true"/>
+                                        </customData>
                                         <HBox alignItems="Center" justifyContent="SpaceBetween" width="100%">
-                                            <HBox alignItems="Center" class="sapUiTinyMargin">
+                                            <HBox alignItems="Center">
                                                 <!-- Calendar Date Tile -->
                                                 <VBox class="zoaDateBox" justifyContent="Center" alignItems="Center">
                                                     <Text text="{path: 'EventDate', formatter: '.formatDateMonth'}" class="zoaDateMonth"/>
@@ -78,22 +81,17 @@
                                                 </VBox>
                                                 <!-- Event Details -->
                                                 <VBox>
-                                                    <HBox alignItems="Center" class="sapUiTinyMarginBottom">
+                                                    <HBox alignItems="Center">
                                                         <ObjectStatus
                                                             text="{Topic}"
-                                                            inverted="true"
                                                             state="{= ${Topic} === 'HOLIDAY' ? 'Information' : (${Topic} === 'EVENT' ? 'Indication06' : 'Warning') }"
-                                                            class="sapUiTinyMarginEnd"/>
-                                                        <Title text="{Title}" level="H4"/>
+                                                            class="zoaMiniTopicTag sapUiTinyMarginEnd"/>
+                                                        <Title text="{Title}" level="H5"/>
                                                     </HBox>
-                                                    <HBox alignItems="Center" visible="{= !!${path: 'DecisionReason', targetType: 'any'} }">
-                                                        <core:Icon src="sap-icon://comment" size="0.85rem" color="#64748B" class="sapUiTinyMarginEnd"/>
-                                                        <Text text="Reason: {DecisionReason}" class="sapUiTinyMarginBottom"/>
-                                                    </HBox>
-                                                    <HBox alignItems="Center" visible="{= !!${path: 'AuthorityRole', targetType: 'any'} }">
-                                                        <core:Icon src="sap-icon://shield" size="0.85rem" color="#64748B" class="sapUiTinyMarginEnd"/>
-                                                        <Text text="Approved by {AuthorityRole}"/>
-                                                    </HBox>
+                                                    <Text
+                                                        text="{parts: [{path: 'AuthorityRole', targetType: 'any'}, {path: 'DecisionReason', targetType: 'any'}], formatter: '.formatEventMeta'}"
+                                                        visible="{= !!${path: 'AuthorityRole', targetType: 'any'} || !!${path: 'DecisionReason', targetType: 'any'} }"
+                                                        class="zoaCardMeta"/>
                                                 </VBox>
                                             </HBox>
                                             <!-- Status Pill -->
@@ -102,8 +100,7 @@
                                                     text="Confirmed"
                                                     state="Success"
                                                     icon="sap-icon://accept"
-                                                    inverted="true"
-                                                    class="sapUiSmallMarginEnd"/>
+                                                    inverted="true"/>
                                             </HBox>
                                         </HBox>
                                     </CustomListItem>
@@ -201,6 +198,12 @@
                                     updateFinished=".onRequestsLoaded"
                                     showSeparators="None">
                                     <CustomListItem class="zoaCardItem">
+                                        <customData>
+                                            <core:CustomData
+                                                key="status"
+                                                value="{parts: [{path: 'Status', targetType: 'any'}, {path: 'StatusText', targetType: 'any'}], formatter: '.formatStatusCssKey'}"
+                                                writeToDom="true"/>
+                                        </customData>
                                         <HBox alignItems="Center" justifyContent="SpaceBetween" width="100%" wrap="Wrap">
                                             <HBox alignItems="Center">
                                                 <core:Icon
@@ -213,15 +216,14 @@
                                                         <Title text="{Title}" level="H5" class="sapUiTinyMarginEnd"/>
                                                         <ObjectStatus
                                                             text="{Topic}"
-                                                            inverted="true"
                                                             state="{= ${Topic} === 'HOLIDAY' ? 'Information' : (${Topic} === 'EVENT' ? 'Indication06' : 'Warning') }"
-                                                            class="sapUiTinyMarginEnd"/>
+                                                            class="zoaMiniTopicTag sapUiTinyMarginEnd"/>
                                                     </HBox>
                                                     <Text text="{parts: [{path: 'EventDate', targetType: 'any'}, {path: 'Topic', targetType: 'any'}, {path: 'AuthorityRole', targetType: 'any'}, {path: 'DecideBy', targetType: 'any'}, {path: 'Status', targetType: 'any'}, {path: 'StatusText', targetType: 'any'}, {path: 'CreatedBy', targetType: 'any'}, {path: 'Description', targetType: 'any'}, {path: 'shellModel>/isStudent', targetType: 'any'}], formatter: '.formatCardMeta'}" class="zoaCardMeta"/>
                                                     <Text text="{parts: [{path: 'Description', targetType: 'any'}, {path: 'DecisionReason', targetType: 'any'}], formatter: '.formatSubInfo'}" visible="{= !!${path: 'Description', targetType: 'any'} || !!${path: 'DecisionReason', targetType: 'any'} }" class="zoaCardSubText"/>
                                                 </VBox>
                                             </HBox>
-                                            <HBox alignItems="Center" class="sapUiTinyMarginTop">
+                                            <HBox alignItems="Center">
                                                 <ObjectStatus
                                                     text="{parts: ['Status', 'StatusText'], formatter: '.formatStatusText'}"
                                                     state="{parts: ['Status', 'StatusText'], formatter: '.formatStatusState'}"
@@ -284,7 +286,7 @@
                                     busyIndicatorDelay="0"
                                     updateFinished=".onAlertsLoaded"
                                     showSeparators="None">
-                                    <CustomListItem class="zoaCardItem">
+                                    <CustomListItem class="zoaCardItem zoaAlertCard">
                                         <HBox alignItems="Center" justifyContent="SpaceBetween" width="100%">
                                             <HBox alignItems="Center">
                                                 <core:Icon
@@ -293,8 +295,8 @@
                                                     color="#D97706"
                                                     class="sapUiSmallMarginEnd sapUiTinyMarginBegin"/>
                                                 <VBox>
-                                                    <Title text="{AlertText}" level="H5" class="sapUiTinyMarginBottom"/>
-                                                    <Text text="System Alert · {path: 'AlertDate', type: 'sap.ui.model.odata.type.Date'}"/>
+                                                    <Title text="{AlertText}" level="H5"/>
+                                                    <Text text="System Alert · {path: 'AlertDate', type: 'sap.ui.model.odata.type.Date'}" class="zoaCardMeta"/>
                                                 </VBox>
                                             </HBox>
                                             <Button
