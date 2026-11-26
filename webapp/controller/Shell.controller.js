@@ -148,19 +148,39 @@ sap.ui.define([
         return String(vText || "").trim().toLowerCase().replace(/\s+/g, " ");
     }
 
-    function isDuplicateCandidate(oExisting, sNormDate, sNormTopic, sNormTitle) {
-        if (!oExisting || (oExisting.IsActiveEntity === false && !oExisting.RequestUuid)) {
-            return false;
+    function findSameDateConflict(aExisting, sNormDate, sNormTopic, sNormTitle, bIsStudent, sUserId) {
+        var aList = aExisting || [];
+        for (var i = 0; i < aList.length; i++) {
+            var oExisting = aList[i];
+            if (!oExisting || oExisting.IsActiveEntity === false) {
+                continue;
+            }
+            var sExistingStatus = normalizeStatusCode(oExisting.Status, oExisting.StatusText);
+            if (sExistingStatus === "N") {
+                continue;
+            }
+            var sExistingDate = normalizeDateKey(oExisting.EventDate);
+            var sExistingTopic = String(oExisting.Topic || "").trim().toUpperCase();
+            if (!sExistingDate || sExistingDate !== sNormDate || sExistingTopic !== sNormTopic) {
+                continue;
+            }
+            if (sNormTopic === "HOLIDAY") {
+                return { record: oExisting, message: "A Holiday is already scheduled or pending for this date." };
+            }
+            if (sNormTopic === "EVENT") {
+                return { record: oExisting, message: "An Event is already scheduled or pending for this date." };
+            }
+            if (sNormTopic === "TRIP") {
+                if (bIsStudent && isRequestCreator(oExisting, sUserId)) {
+                    return { record: oExisting, message: "You already have a Trip scheduled or pending for this date." };
+                }
+                return { record: oExisting, message: "A Trip is already scheduled or pending for this date." };
+            }
+            if (sNormTitle && normalizeTextKey(oExisting.Title) === sNormTitle) {
+                return { record: oExisting, message: "A request is already scheduled or pending for this date." };
+            }
         }
-        var sExistingDate = normalizeDateKey(oExisting.EventDate);
-        var sExistingTopic = String(oExisting.Topic || "").trim().toUpperCase();
-        if (!sExistingDate || sExistingDate !== sNormDate || sExistingTopic !== sNormTopic) {
-            return false;
-        }
-        if (sNormTopic === "HOLIDAY") {
-            return true;
-        }
-        return normalizeTextKey(oExisting.Title) === sNormTitle;
+        return null;
     }
 
     function deduplicateRequestObjects(aRequests) {
@@ -590,7 +610,7 @@ sap.ui.define([
             return aRecords;
         },
 
-        _findDuplicateRequest: function (sTopic, sEventDate, sTitle) {
+        _findDuplicateRequest: function (sTopic, sEventDate, sTitle, bIsStudent, sUserId) {
             var sNormTopic = String(sTopic || "EVENT").trim().toUpperCase();
             var sNormDate = normalizeDateKey(sEventDate);
             var sNormTitle = normalizeTextKey(sTitle);
@@ -602,9 +622,7 @@ sap.ui.define([
                 })
                 .then(function (aRemote) {
                     var aCombined = deduplicateRequestObjects(aLocal.concat(aRemote || []));
-                    return aCombined.find(function (oExisting) {
-                        return isDuplicateCandidate(oExisting, sNormDate, sNormTopic, sNormTitle);
-                    }) || null;
+                    return findSameDateConflict(aCombined, sNormDate, sNormTopic, sNormTitle, bIsStudent, sUserId);
                 });
         },
 
@@ -697,13 +715,10 @@ sap.ui.define([
                     });
             };
 
-            return this._findDuplicateRequest(sTopic, sEventDate, sTitle)
-                .then(function (oDuplicate) {
-                    if (oDuplicate) {
-                        var sDupMsg = sTopic === "HOLIDAY"
-                            ? ("Duplicate Holiday: A Holiday request for " + sEventDate + " already exists.")
-                            : ("Duplicate Request: A " + sTopic + " titled \"" + sTitle + "\" on " + sEventDate + " already exists.");
-                        var oDupErr = new Error(sDupMsg);
+            return this._findDuplicateRequest(sTopic, sEventDate, sTitle, bIsStudent, sUserId)
+                .then(function (oConflict) {
+                    if (oConflict) {
+                        var oDupErr = new Error(oConflict.message);
                         oDupErr._isDuplicateValidation = true;
                         throw oDupErr;
                     }
