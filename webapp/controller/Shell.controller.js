@@ -249,6 +249,287 @@ sap.ui.define([
         return !!sTargetRole && sTargetRole === sRole;
     }
 
+    var ASK_MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    var ASK_MONTH_MAP = {
+        jan: 1, january: 1,
+        feb: 2, february: 2, febuary: 2,
+        mar: 3, march: 3,
+        apr: 4, april: 4,
+        may: 5,
+        jun: 6, june: 6,
+        jul: 7, july: 7,
+        aug: 8, august: 8,
+        sep: 9, sept: 9, september: 9,
+        oct: 10, october: 10,
+        nov: 11, november: 11,
+        dec: 12, december: 12
+    };
+
+    function formatLocalIsoDate(oDate) {
+        if (!(oDate instanceof Date) || isNaN(oDate.getTime())) {
+            return "";
+        }
+        var iYear = oDate.getFullYear();
+        var iMonth = oDate.getMonth() + 1;
+        var iDay = oDate.getDate();
+        return iYear + "-" + (iMonth < 10 ? "0" : "") + iMonth + "-" + (iDay < 10 ? "0" : "") + iDay;
+    }
+
+    function normalizeAskDate(vDate) {
+        if (!vDate) {
+            return "";
+        }
+        if (vDate instanceof Date) {
+            return formatLocalIsoDate(vDate);
+        }
+        return normalizeDateKey(vDate);
+    }
+
+    function formatAskDisplayDate(sIsoDate) {
+        var m = String(sIsoDate || "").match(/^(\d{4})-(\d{2})-(\d{2})/);
+        if (!m) {
+            return String(sIsoDate || "");
+        }
+        var iMonth = parseInt(m[2], 10);
+        var iDay = parseInt(m[3], 10);
+        if (iMonth < 1 || iMonth > 12) {
+            return sIsoDate;
+        }
+        return iDay + " " + ASK_MONTH_NAMES[iMonth - 1] + " " + m[1];
+    }
+
+    function formatAskTopicLabel(sTopic) {
+        var sUpper = String(sTopic || "").trim().toUpperCase();
+        if (sUpper === "HOLIDAY") { return "Holiday"; }
+        if (sUpper === "EVENT") { return "Event"; }
+        if (sUpper === "TRIP") { return "Trip"; }
+        return sUpper || "Event";
+    }
+
+    function formatAskStatusLabel(sStatusCode, sStatusText) {
+        if (sStatusCode === "C") { return "Confirmed"; }
+        if (sStatusCode === "N") { return "Not happening (Declined)"; }
+        if (sStatusCode === "P") { return "Pending"; }
+        return String(sStatusText || "Pending").trim();
+    }
+
+    function isValidCalendarDate(iYear, iMonth, iDay) {
+        if (iMonth < 1 || iMonth > 12 || iDay < 1 || iDay > 31) {
+            return false;
+        }
+        var oCheck = new Date(iYear, iMonth - 1, iDay);
+        return oCheck.getFullYear() === iYear &&
+            oCheck.getMonth() === (iMonth - 1) &&
+            oCheck.getDate() === iDay;
+    }
+
+    function buildParsedDateEntry(iExplicitYear, iMonth, iDay, oRefDate, sTodayIso) {
+        var bHasYear = !!iExplicitYear;
+        var iYear = bHasYear ? iExplicitYear : oRefDate.getFullYear();
+        if (!isValidCalendarDate(iYear, iMonth, iDay)) {
+            return null;
+        }
+        var sCandidate = formatLocalIsoDate(new Date(iYear, iMonth - 1, iDay));
+        if (!bHasYear && sCandidate < sTodayIso) {
+            var iNextYear = iYear + 1;
+            if (isValidCalendarDate(iNextYear, iMonth, iDay)) {
+                iYear = iNextYear;
+                sCandidate = formatLocalIsoDate(new Date(iYear, iMonth - 1, iDay));
+            }
+        }
+        return {
+            isoDate: sCandidate,
+            displayDate: formatAskDisplayDate(sCandidate),
+            monthDay: sCandidate.slice(5),
+            hasExplicitYear: bHasYear
+        };
+    }
+
+    function parseQuestionDates(sQuestion, oReferenceDate) {
+        var oRef = (oReferenceDate instanceof Date && !isNaN(oReferenceDate.getTime())) ? oReferenceDate : new Date();
+        var sTodayIso = formatLocalIsoDate(oRef);
+        var sText = String(sQuestion || "");
+        var aMatches = [];
+        var oSeenDates = {};
+        var aCoveredSpans = [];
+
+        function overlapsSpan(iStart, iEnd) {
+            for (var i = 0; i < aCoveredSpans.length; i++) {
+                if (iStart < aCoveredSpans[i][1] && iEnd > aCoveredSpans[i][0]) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        function addEntry(oEntry, iStart, iEnd) {
+            if (!oEntry) {
+                return;
+            }
+            aCoveredSpans.push([iStart, iEnd]);
+            if (!oSeenDates[oEntry.isoDate]) {
+                oSeenDates[oEntry.isoDate] = true;
+                aMatches.push(oEntry);
+            }
+        }
+
+        // 1. ISO date: YYYY-MM-DD or YYYY/MM/DD
+        var rIso = /\b(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})\b/g;
+        var m;
+        while ((m = rIso.exec(sText)) !== null) {
+            addEntry(
+                buildParsedDateEntry(parseInt(m[1], 10), parseInt(m[2], 10), parseInt(m[3], 10), oRef, sTodayIso),
+                m.index,
+                m.index + m[0].length
+            );
+        }
+
+        // 2. Day + Month (+ optional Year): "18 december", "1st feb 2027", "18th of dec, 2026"
+        var sMonthAlt = "jan(?:uary)?|feb(?:ruary|uary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?";
+        var rDayMonth = new RegExp("\\b(\\d{1,2})(?:st|nd|rd|th)?(?:\\s+of)?\\s+(" + sMonthAlt + ")(?:\\s*,?\\s*(\\d{4}))?\\b", "gi");
+        while ((m = rDayMonth.exec(sText)) !== null) {
+            if (overlapsSpan(m.index, m.index + m[0].length)) { continue; }
+            var iMonthDM = ASK_MONTH_MAP[m[2].toLowerCase()];
+            var iYearDM = m[3] ? parseInt(m[3], 10) : 0;
+            addEntry(
+                buildParsedDateEntry(iYearDM, iMonthDM, parseInt(m[1], 10), oRef, sTodayIso),
+                m.index,
+                m.index + m[0].length
+            );
+        }
+
+        // 3. Month + Day (+ optional Year): "december 18", "feb 1st, 2027"
+        var rMonthDay = new RegExp("\\b(" + sMonthAlt + ")\\s+(\\d{1,2})(?:st|nd|rd|th)?(?:\\s*,?\\s*(\\d{4}))?\\b", "gi");
+        while ((m = rMonthDay.exec(sText)) !== null) {
+            if (overlapsSpan(m.index, m.index + m[0].length)) { continue; }
+            var iMonthMD = ASK_MONTH_MAP[m[1].toLowerCase()];
+            var iYearMD = m[3] ? parseInt(m[3], 10) : 0;
+            addEntry(
+                buildParsedDateEntry(iYearMD, iMonthMD, parseInt(m[2], 10), oRef, sTodayIso),
+                m.index,
+                m.index + m[0].length
+            );
+        }
+
+        // 4. Numeric DD/MM[/YYYY] or DD-MM[-YYYY]
+        var rNumDM = /(?:^|\s)(\d{1,2})[\/\-](\d{1,2})(?:[\/\-](\d{2,4}))?(?=\s|$|[?!.,])/g;
+        while ((m = rNumDM.exec(sText)) !== null) {
+            var iLeadingSpaces = m[0].length - m[0].replace(/^\s+/, "").length;
+            var iStart = m.index + iLeadingSpaces;
+            var iEnd = m.index + m[0].length;
+            if (overlapsSpan(iStart, iEnd)) { continue; }
+            var iYearNum = 0;
+            if (m[3]) {
+                iYearNum = parseInt(m[3], 10);
+                if (iYearNum < 100) { iYearNum += 2000; }
+            }
+            addEntry(
+                buildParsedDateEntry(iYearNum, parseInt(m[2], 10), parseInt(m[1], 10), oRef, sTodayIso),
+                iStart,
+                iEnd
+            );
+        }
+
+        // 5. Relative dates when no explicit calendar date was provided
+        if (aMatches.length === 0) {
+            if (/\b(today|aaj)\b/i.test(sText)) {
+                addEntry(buildParsedDateEntry(oRef.getFullYear(), oRef.getMonth() + 1, oRef.getDate(), oRef, sTodayIso), 0, 0);
+            } else if (/\byesterday\b/i.test(sText) || (/\bkal\b/i.test(sText) && /\b(tha|the|thi|was|were|yesterday)\b/i.test(sText))) {
+                var oYest = new Date(oRef.getFullYear(), oRef.getMonth(), oRef.getDate() - 1);
+                addEntry(buildParsedDateEntry(oYest.getFullYear(), oYest.getMonth() + 1, oYest.getDate(), oRef, sTodayIso), 0, 0);
+            } else if (/\b(tomorrow|kal)\b/i.test(sText)) {
+                var oTom = new Date(oRef.getFullYear(), oRef.getMonth(), oRef.getDate() + 1);
+                addEntry(buildParsedDateEntry(oTom.getFullYear(), oTom.getMonth() + 1, oTom.getDate(), oRef, sTodayIso), 0, 0);
+            }
+        }
+
+        return aMatches;
+    }
+
+    function detectRequestedTopic(sQuestion) {
+        var sText = String(sQuestion || "");
+        var aDetected = [];
+        if (/\bholidays?\b|chhutti|chutti|avakash/i.test(sText)) {
+            aDetected.push("HOLIDAY");
+        }
+        if (/\bevents?\b|\bfunctions?\b|\bfest\b|\bseminars?\b|\bworkshops?\b|\bcelebrations?\b/i.test(sText)) {
+            aDetected.push("EVENT");
+        }
+        if (/\btrips?\b|\bpicnics?\b|\btours?\b|\bexcursions?\b/i.test(sText)) {
+            aDetected.push("TRIP");
+        }
+        return aDetected.length === 1 ? aDetected[0] : null;
+    }
+
+    function hasMultiDateIntent(sQuestion) {
+        return /\b(all|list|every|other|between|after|before|next\s+(?:holiday|event|trip)|upcoming\s+(?:holidays|events|trips)|all\s+confirmed)\b/i.test(String(sQuestion || ""));
+    }
+
+    function buildAskAIContext(sQuestion, oDatabaseData, oReferenceDate) {
+        var oRef = (oReferenceDate instanceof Date && !isNaN(oReferenceDate.getTime())) ? oReferenceDate : new Date();
+        var sTodayIso = formatLocalIsoDate(oRef);
+        var aParsedDates = parseQuestionDates(sQuestion, oRef);
+        var sRequestedTopic = detectRequestedTopic(sQuestion);
+        var aAllRecords = (oDatabaseData && oDatabaseData.combined_records) || (oDatabaseData && oDatabaseData.live_requests) || [];
+        var bIsSingleDateQuery = aParsedDates.length === 1 && !hasMultiDateIntent(sQuestion);
+
+        if (bIsSingleDateQuery) {
+            var oTargetDate = aParsedDates[0];
+            var aExactDateRecords = aAllRecords.filter(function (oRec) {
+                return oRec && oRec.event_date === oTargetDate.isoDate;
+            });
+            var aOtherYearRecords = [];
+            if (!oTargetDate.hasExplicitYear && aExactDateRecords.length === 0) {
+                aOtherYearRecords = aAllRecords.filter(function (oRec) {
+                    return oRec && oRec.event_date && oRec.event_date.slice(5) === oTargetDate.monthDay;
+                });
+            }
+            var aExactTopicMatches = sRequestedTopic
+                ? aExactDateRecords.filter(function (oRec) { return oRec.topic === sRequestedTopic; })
+                : aExactDateRecords;
+            var aOtherTopicMatches = sRequestedTopic
+                ? aExactDateRecords.filter(function (oRec) { return oRec.topic !== sRequestedTopic; })
+                : [];
+
+            var sLookupStatus = "NO_RECORDS_ON_DATE";
+            if (aExactDateRecords.length > 0) {
+                if (sRequestedTopic) {
+                    sLookupStatus = aExactTopicMatches.length > 0 ? "EXACT_TOPIC_FOUND" : "OTHER_TOPIC_FOUND";
+                } else {
+                    sLookupStatus = "RECORDS_FOUND";
+                }
+            }
+
+            return {
+                current_date: sTodayIso,
+                current_date_display: formatAskDisplayDate(sTodayIso),
+                query_scope: "date_specific",
+                date_lookup: {
+                    lookup_status: sLookupStatus,
+                    queried_date: oTargetDate.isoDate,
+                    queried_date_display: oTargetDate.displayDate,
+                    requested_topic: sRequestedTopic,
+                    requested_topic_label: sRequestedTopic ? formatAskTopicLabel(sRequestedTopic) : "Any (Holiday / Event / Trip)",
+                    exact_topic_matches: aExactTopicMatches,
+                    other_topic_matches: aOtherTopicMatches,
+                    all_records_on_queried_date: aExactDateRecords,
+                    other_year_same_month_day_records: aOtherYearRecords
+                },
+                live_authorities: (oDatabaseData && oDatabaseData.live_authorities) || []
+            };
+        }
+
+        return {
+            current_date: sTodayIso,
+            current_date_display: formatAskDisplayDate(sTodayIso),
+            query_scope: "general",
+            records: aAllRecords,
+            live_alerts: (oDatabaseData && oDatabaseData.live_alerts) || [],
+            live_authorities: (oDatabaseData && oDatabaseData.live_authorities) || [],
+            total_records: (oDatabaseData && oDatabaseData.total_records) || 0
+        };
+    }
+
     return Controller.extend("zoa.zoarequestui.controller.Shell", {
 
         onInit: function () {
@@ -372,7 +653,7 @@ sap.ui.define([
          * @param {sap.ui.model.Filter[]} [aFilters] - optional filters
          * @returns {Promise<Array<object>>}
          */
-        _fetchODataEntity: function (sEntityPath, aFilters) {
+        _fetchODataEntity: function (sEntityPath, aFilters, iTop) {
             var oModel = this.getView().getModel();
             if (!oModel || typeof oModel.bindList !== "function") {
                 return Promise.reject(new Error("ODataModel V4 is not available on view."));
@@ -382,7 +663,7 @@ sap.ui.define([
                 $$groupId: "$auto"
             });
 
-            return oListBinding.requestContexts(0, 200).then(function (aContexts) {
+            return oListBinding.requestContexts(0, iTop || 200).then(function (aContexts) {
                 return aContexts.map(function (oContext) {
                     return oContext.getObject();
                 });
@@ -399,20 +680,23 @@ sap.ui.define([
         _getLiveContext: function () {
             var that = this;
             return Promise.all([
-                that._fetchODataEntity("/" + ENTITY_SETS.request).catch(function (err) {
+                that._fetchODataEntity("/" + ENTITY_SETS.request, null, 500).catch(function (err) {
                     return { _error: that._formatError(err) };
                 }),
-                that._fetchODataEntity("/" + ENTITY_SETS.alert).catch(function (err) {
+                that._fetchODataEntity("/" + ENTITY_SETS.alert, null, 500).catch(function (err) {
                     return { _error: that._formatError(err) };
                 }),
-                that._fetchODataEntity("/" + ENTITY_SETS.event).catch(function (err) {
+                that._fetchODataEntity("/" + ENTITY_SETS.event, null, 500).catch(function (err) {
                     return { _error: that._formatError(err) };
                 }),
-                that._fetchODataEntity("/" + ENTITY_SETS.authority).catch(function (err) {
+                that._fetchODataEntity("/" + ENTITY_SETS.authority, null, 200).catch(function (err) {
                     return { _error: that._formatError(err) };
                 })
             ]).then(function (aResults) {
-                var aRequests = deduplicateRequestObjects(Array.isArray(aResults[0]) ? aResults[0] : []);
+                var aActiveRequests = (Array.isArray(aResults[0]) ? aResults[0] : []).filter(function (req) {
+                    return req && req.IsActiveEntity !== false;
+                });
+                var aRequests = deduplicateRequestObjects(aActiveRequests);
                 var aAlerts = Array.isArray(aResults[1]) ? aResults[1] : [];
                 var aEvents = Array.isArray(aResults[2]) ? aResults[2] : [];
                 var aAuthorities = Array.isArray(aResults[3]) ? aResults[3] : [];
@@ -423,44 +707,84 @@ sap.ui.define([
                 if (aResults[2]._error) { oErrors.events = aResults[2]._error; }
                 if (aResults[3]._error) { oErrors.authorities = aResults[3]._error; }
 
-                var oViewerModel = that.getView().getModel("shellModel");
-                var bViewerIsStudent = oViewerModel ? !!oViewerModel.getProperty("/isStudent") : true;
-                var sViewerRole = oViewerModel ? oViewerModel.getProperty("/role") : "STUDENT";
-                var sViewerUserId = oViewerModel ? oViewerModel.getProperty("/userId") : "";
+                // Include ALL active SAP request records (Holiday, Event, Trip across Confirmed, Pending, Declined)
+                // so Ask AI can perform strict date-specific and cross-topic lookups.
+                var oSeenContent = {};
+                var cleanRequests = aRequests.map(function (req) {
+                    var sTopic = String(req[FIELD_MAP.request.topic] || req.Topic || "").trim().toUpperCase();
+                    var sRawTitle = req[FIELD_MAP.request.title] || req.Title || "";
+                    var sIsoDate = normalizeAskDate(req[FIELD_MAP.request.eventDate] || req.EventDate);
+                    var sStatusRaw = req[FIELD_MAP.request.status] || req.Status;
+                    var sStatusTextRaw = req[FIELD_MAP.request.statusText] || req.StatusText;
+                    var sStatusCode = normalizeStatusCode(sStatusRaw, sStatusTextRaw);
+                    var sAuthorityRole = resolveAuthorityRole(sTopic, req[FIELD_MAP.request.authorityRole] || req.AuthorityRole);
+                    var sDecideBy = normalizeAskDate(req[FIELD_MAP.request.decideBy] || req.DecideBy);
+                    var sCleanDesc = that.formatCleanDescription(req[FIELD_MAP.request.description] || req.Description);
+                    var sContentKey = (sIsoDate && sTopic && sRawTitle)
+                        ? (sIsoDate + "|" + sTopic + "|" + normalizeTextKey(sRawTitle))
+                        : "";
+                    if (sContentKey) {
+                        oSeenContent[sContentKey] = true;
+                    }
 
-                // Clean draft control internal fields before passing to AI (respecting PENDING visibility)
-                var cleanRequests = aRequests.filter(function (req) {
-                    return canViewRequest(req, bViewerIsStudent, sViewerRole, sViewerUserId);
-                }).map(function (req) {
                     return {
-                        topic: req[FIELD_MAP.request.topic] || req.Topic,
-                        title: req[FIELD_MAP.request.title] || req.Title,
-                        event_date: req[FIELD_MAP.request.eventDate] || req.EventDate,
-                        description: req[FIELD_MAP.request.description] || req.Description,
-                        status: req[FIELD_MAP.request.status] || req.Status,
-                        status_text: req[FIELD_MAP.request.statusText] || req.StatusText,
-                        authority_role: req[FIELD_MAP.request.authorityRole] || req.AuthorityRole,
-                        decide_by: req[FIELD_MAP.request.decideBy] || req.DecideBy,
-                        decision_reason: req[FIELD_MAP.request.decisionReason] || req.DecisionReason,
-                        urgent: req[FIELD_MAP.request.urgent] || req.Urgent,
-                        created_by: req[FIELD_MAP.request.createdBy] || req.CreatedBy
+                        topic: sTopic,
+                        topic_label: formatAskTopicLabel(sTopic),
+                        title: sRawTitle,
+                        event_date: sIsoDate,
+                        display_date: formatAskDisplayDate(sIsoDate),
+                        description: sCleanDesc,
+                        status: sStatusCode,
+                        status_text: sStatusTextRaw || formatAskStatusLabel(sStatusCode),
+                        status_label: formatAskStatusLabel(sStatusCode, sStatusTextRaw),
+                        authority_role: sAuthorityRole,
+                        decided_by: sAuthorityRole,
+                        decide_by: sDecideBy,
+                        decision_reason: req[FIELD_MAP.request.decisionReason] || req.DecisionReason || "",
+                        urgent: !!(req[FIELD_MAP.request.urgent] || req.Urgent),
+                        created_by: req[FIELD_MAP.request.createdBy] || req.CreatedBy || ""
                     };
                 });
 
                 var cleanAlerts = aAlerts.map(function (al) {
+                    var sAlertDate = normalizeAskDate(al[FIELD_MAP.alert.date] || al.AlertDate);
                     return {
-                        alert_date: al[FIELD_MAP.alert.date] || al.AlertDate,
+                        alert_date: sAlertDate,
+                        display_date: formatAskDisplayDate(sAlertDate),
                         alert_text: al[FIELD_MAP.alert.text] || al.AlertText
                     };
                 });
 
                 var cleanEvents = aEvents.map(function (ev) {
+                    var sTopic = String(ev[FIELD_MAP.event.topic] || ev.Topic || "").trim().toUpperCase();
+                    var sTitle = ev[FIELD_MAP.event.title] || ev.Title || "";
+                    var sIsoDate = normalizeAskDate(ev[FIELD_MAP.event.eventDate] || ev.EventDate);
+                    var sAuthorityRole = resolveAuthorityRole(sTopic, "");
                     return {
-                        title: ev[FIELD_MAP.event.title] || ev.Title,
-                        topic: ev[FIELD_MAP.event.topic] || ev.Topic,
-                        event_date: ev[FIELD_MAP.event.eventDate] || ev.EventDate,
-                        reason: ev[FIELD_MAP.event.reason] || ev.Reason
+                        topic: sTopic,
+                        topic_label: formatAskTopicLabel(sTopic),
+                        title: sTitle,
+                        event_date: sIsoDate,
+                        display_date: formatAskDisplayDate(sIsoDate),
+                        reason: ev[FIELD_MAP.event.reason] || ev.Reason || "",
+                        status: "C",
+                        status_text: "Confirmed",
+                        status_label: "Confirmed",
+                        authority_role: sAuthorityRole,
+                        decided_by: sAuthorityRole,
+                        decision_reason: ev[FIELD_MAP.event.reason] || ev.Reason || ""
                     };
+                });
+
+                var aCombinedRecords = cleanRequests.slice();
+                cleanEvents.forEach(function (ev) {
+                    var sContentKey = (ev.event_date && ev.topic && ev.title)
+                        ? (ev.event_date + "|" + ev.topic + "|" + normalizeTextKey(ev.title))
+                        : "";
+                    if (!sContentKey || !oSeenContent[sContentKey]) {
+                        if (sContentKey) { oSeenContent[sContentKey] = true; }
+                        aCombinedRecords.push(ev);
+                    }
                 });
 
                 var cleanAuthorities = aAuthorities.map(function (au) {
@@ -476,6 +800,7 @@ sap.ui.define([
                     live_requests: cleanRequests,
                     live_alerts: cleanAlerts,
                     live_events: cleanEvents,
+                    combined_records: aCombinedRecords,
                     live_authorities: cleanAuthorities,
                     connection_errors: Object.keys(oErrors).length > 0 ? oErrors : null,
                     total_records: cleanRequests.length + cleanAlerts.length + cleanEvents.length
@@ -1369,13 +1694,7 @@ sap.ui.define([
                     return;
                 }
 
-                var sLiveHolidayAnswer = this._getLiveHolidayAnswer(sQuestion, oDatabaseData);
-                if (sLiveHolidayAnswer !== null) {
-                    this._appendAnswer(sLiveHolidayAnswer);
-                    return;
-                }
-
-                // Step 2: Call Groq AI with real database state
+                // Step 2: Always pass user question + scoped live SAP records to Groq AI
                 return this._callGroqAIWithDatabase(sQuestion, oDatabaseData).then(function (sAnswer) {
                     this._appendAnswer(sAnswer);
                 }.bind(this), function (err) {
@@ -1385,82 +1704,6 @@ sap.ui.define([
                 var sErrorFormatted = this._formatError(err);
                 this._appendAnswer("Error communicating with SAP backend: " + sErrorFormatted);
             }.bind(this));
-        },
-
-        _getLiveHolidayAnswer: function (sQuestion, oDatabaseData) {
-            if (!/\bholidays?\b|chhutti|chutti|avakash/i.test(sQuestion)) {
-                return null;
-            }
-
-            if (oDatabaseData.connection_errors && oDatabaseData.connection_errors.requests) {
-                return "I could not retrieve holiday requests from the live SAP backend: " +
-                    oDatabaseData.connection_errors.requests;
-            }
-
-            var oToday = new Date();
-            var iTodayMonth = oToday.getMonth() + 1;
-            var sToday = oToday.getFullYear() + "-" +
-                (iTodayMonth < 10 ? "0" : "") + iTodayMonth + "-" +
-                (oToday.getDate() < 10 ? "0" : "") + oToday.getDate();
-            var aMonths = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-            var aUpcomingHolidays = (oDatabaseData.live_requests || []).filter(function (oRequest) {
-                var sTopic = String(oRequest.topic || "").toUpperCase();
-                var sStatus = String(oRequest.status || "").toUpperCase();
-                var sStatusText = String(oRequest.status_text || "").toUpperCase();
-                return sTopic === "HOLIDAY" &&
-                    (sStatus === "C" || sStatusText === "CONFIRMED");
-            }).map(function (oRequest) {
-                var sDate = "";
-                if (oRequest.event_date instanceof Date) {
-                    var oEventDate = oRequest.event_date;
-                    var iEventMonth = oEventDate.getMonth() + 1;
-                    sDate = oEventDate.getFullYear() + "-" +
-                        (iEventMonth < 10 ? "0" : "") + iEventMonth + "-" +
-                        (oEventDate.getDate() < 10 ? "0" : "") + oEventDate.getDate();
-                } else {
-                    sDate = String(oRequest.event_date || "");
-                }
-                var aDateParts = sDate.match(/^(\d{4})-(\d{2})-(\d{2})/);
-                if (!aDateParts) {
-                    return null;
-                }
-                var iMonth = parseInt(aDateParts[2], 10);
-                if (iMonth < 1 || iMonth > 12) {
-                    return null;
-                }
-                return {
-                    request: oRequest,
-                    date: aDateParts[0],
-                    displayDate: parseInt(aDateParts[3], 10) + " " +
-                        aMonths[iMonth - 1] + " " + aDateParts[1]
-                };
-            }).filter(function (oHoliday) {
-                return oHoliday && oHoliday.date >= sToday;
-            }).sort(function (oHolidayA, oHolidayB) {
-                return oHolidayA.date.localeCompare(oHolidayB.date);
-            });
-
-            if (aUpcomingHolidays.length === 0) {
-                return "No confirmed upcoming holidays were found in the live SAP request records.";
-            }
-
-            var aAnswer = ["Confirmed upcoming holidays from live SAP data:"];
-            aUpcomingHolidays.forEach(function (oHoliday, iIndex) {
-                var oRequest = oHoliday.request;
-                aAnswer.push(
-                    "",
-                    (iIndex + 1) + ". " + (oRequest.title || "Holiday"),
-                    "- Date: " + oHoliday.displayDate,
-                    "- Status: " + (oRequest.status_text || "Confirmed")
-                );
-                if (oRequest.decision_reason) {
-                    aAnswer.push("- Reason: " + oRequest.decision_reason);
-                }
-                if (oRequest.authority_role) {
-                    aAnswer.push("- Decided by: " + oRequest.authority_role);
-                }
-            });
-            return aAnswer.join("\n");
         },
 
         _appendAnswer: function (sText) {
@@ -1476,48 +1719,48 @@ sap.ui.define([
                 return Promise.reject(new Error("Groq API key is not configured. Set GROQ_API_KEY in webapp/config.js."));
             }
 
+            var oScopedContext = buildAskAIContext(sQuestion, oDatabaseData, new Date());
             var sDatabaseNotice = "";
             if (!oDatabaseData.connection_errors && oDatabaseData.total_records === 0) {
-                sDatabaseNotice = "\nNOTICE: The SAP database currently contains 0 records. If the user asks about events, holidays, or requests, state politely that no records currently exist in the database and advise checking with the department.";
+                sDatabaseNotice = "\nNOTICE: The SAP database currently contains 0 records. If the user asks about events, holidays, or requests, state clearly that no records currently exist in the database and advise checking with the department.";
             }
-            var oAvailableDatabaseData = {
-                database_service: oDatabaseData.database_service,
-                live_requests: oDatabaseData.live_requests,
-                live_alerts: oDatabaseData.live_alerts,
-                live_events: oDatabaseData.live_events,
-                live_authorities: oDatabaseData.live_authorities,
-                total_records: oDatabaseData.total_records
-            };
 
             var sSystemPrompt =
-                "You are the official 'One Answer' Student AI Assistant for the ZOA College Portal.\n" +
+                "You are the official 'One Answer' AI Assistant for the ZOA College Portal.\n" +
+                "Today's date is " + oScopedContext.current_date_display + " (" + oScopedContext.current_date + ").\n" +
                 "You are provided with REAL LIVE DATA fetched directly from the SAP ABAP RAP database tables (ZOA_OA_REQUEST, ZOA_OA_ALERT, ZOA_OA_AUTH).\n" +
-                "Answer student questions accurately and strictly according to this live database state and the ABAP backend rules:\n\n" +
-                "Never add notes about connection errors or unavailable auxiliary entity sets. Never invent a record or field value; only state details present in the provided live records.\n" +
+                "Answer the user's question accurately, directly, and strictly according to this live database state:\n\n" +
+                "Never add notes about connection errors or unavailable auxiliary entity sets. Never invent, guess, or hallucinate any date, title, status, reason, or record not present in the provided JSON.\n\n" +
+                "=== STRICT QUERY-ANSWERING RULES ===\n" +
+                "1. WHEN `query_scope` IS `date_specific` (the user asked about a specific date in `date_lookup`):\n" +
+                "   - Answer ONLY for `date_lookup.queried_date_display` (`date_lookup.queried_date`). NEVER dump or list records from other dates.\n" +
+                "   - Case A (`lookup_status` is `EXACT_TOPIC_FOUND`): Answer directly for that date using `exact_topic_matches`. Include Title, Topic/Type, Date, Status, Reason (or Decide By if Pending with no decision reason), and Decided By.\n" +
+                "   - Case B (`lookup_status` is `OTHER_TOPIC_FOUND`): First clearly state that there is NO [requested_topic_label] on [queried_date_display] in the live SAP database, AND then show the actual record(s) from `other_topic_matches` found on that same date with Title, Topic/Type, Date, Status, Reason, and Decided By.\n" +
+                "   - Case C (`lookup_status` is `RECORDS_FOUND`): Show all record(s) found on that exact date with Title, Topic/Type, Date, Status, Reason, and Decided By.\n" +
+                "   - Case D (`lookup_status` is `NO_RECORDS_ON_DATE`): Explicitly reply using the phrasing: 'No Holiday, Event, or Trip is scheduled in the live SAP database for [queried_date_display].' (If `other_year_same_month_day_records` is non-empty, mention those records separately with their exact full date and year.)\n" +
+                "2. WHEN `query_scope` IS `general`:\n" +
+                "   - Only list multiple items when the user explicitly asks a broad question (e.g., 'Upcoming holidays?', 'All confirmed events', 'Pending requests'). For 'Upcoming' questions, include only records with `event_date >= current_date`.\n" +
+                "   - For single-item/topic questions (e.g., 'Annual function date & status?', 'Status of Class Trip?'), answer only with the matching record(s), not unrelated records.\n\n" +
                 "=== BACKEND BUSINESS RULES ===\n" +
-                "1. Status 'C' (Confirmed): The request is approved and officially happening. Provide Title, Event Date, and Decision Reason.\n" +
-                "2. Status 'N' (Not happening): The request was rejected/cancelled by authority. Provide Title, Event Date, and Decision Reason.\n" +
-                "3. Status 'P' (Pending): The request is awaiting decision. State clearly: 'This request is currently pending with the [AuthorityRole] and is not yet official.' Mention the DecideBy deadline date.\n" +
-                "4. 7-Day Rule (DecideBy): DecideBy is Event Date minus 7 days. If the event is within 7 days, it is marked as 'Urgent' (Priority = Urgent).\n" +
+                "1. Status 'C' (Confirmed / Approved): Officially approved and happening. Provide Title, Topic/Type, Date, Status (Confirmed), Reason, and Decided by.\n" +
+                "2. Status 'N' (Not happening / Declined): Rejected/cancelled by authority. Provide Title, Topic/Type, Date, Status (Rejected), Reason, and Decided by.\n" +
+                "3. Status 'P' (Pending): Awaiting decision. State clearly that it is Pending with [authority_role] and not yet official, and mention the `decide_by` deadline date if present.\n" +
+                "4. 7-Day Rule (DecideBy): DecideBy is Event Date minus 7 days. If the event is within 7 days, it is marked as 'Urgent'.\n" +
                 "5. Authorities: HOLIDAY is decided by DIRECTOR; EVENT is decided by HOD; TRIP is decided by TEACHER.\n" +
                 "6. Attendance Rule: Minimum 75% attendance is compulsory for semester exams.\n" +
-                "7. If a date has already passed: 'This date has already passed and no decision was recorded.'\n" +
-                "8. If an event/request is not in the live database: State that no record was found in the database and advise checking with the department.\n" +
                 sDatabaseNotice + "\n\n" +
-                "=== SEQUENCE & FORMATTING INSTRUCTIONS (STRICT) ===\n" +
-                "- Structure your answer in a clean, professional, readable sequence.\n" +
-                "- When listing events, holidays, or requests, NEVER put them together in one continuous paragraph.\n" +
-                "- List each event/holiday as a distinct numbered item (1., 2., 3., etc.).\n" +
-                "- For each item, put its properties on separate lines with clean bullets:\n" +
-                "  1. [Event/Holiday Title]\n" +
-                "     - Date: [Event Date]\n" +
-                "     - Status: [Confirmed / Pending / Not happening]\n" +
-                "     - Reason: [Decision Reason]\n" +
-                "     - Decided by: [Authority]\n" +
-                "- Add a blank line between each item so they are neatly separated.\n\n" +
-                "=== LIVE DATABASE STATE (REAL DATA) ===\n" +
-                JSON.stringify(oAvailableDatabaseData, null, 2) + "\n\n" +
-                "IMPORTANT: Always respond in clear, professional English. Be direct, helpful, and concise.";
+                "=== FORMATTING INSTRUCTIONS (STRICT) ===\n" +
+                "- Respond in clear, professional English (even if the user wrote in Hinglish).\n" +
+                "- Format each matching record as a clean numbered item with bulleted properties on separate lines:\n" +
+                "  1. [Title]\n" +
+                "     - Topic: [Holiday / Event / Trip]\n" +
+                "     - Date: [DD Mon YYYY]\n" +
+                "     - Status: [Confirmed / Pending / Rejected]\n" +
+                "     - Reason: [Decision Reason, or Description / DecideBy if Pending]\n" +
+                "     - Decided by: [Authority Role]\n" +
+                "- Add a blank line between multiple items.\n\n" +
+                "=== LIVE SAP DATABASE CONTEXT ===\n" +
+                JSON.stringify(oScopedContext);
 
             return fetch("https://api.groq.com/openai/v1/chat/completions", {
                 method: "POST",
@@ -1527,7 +1770,7 @@ sap.ui.define([
                 },
                 body: JSON.stringify({
                     model: GROQ_MODEL,
-                    temperature: 0.2,
+                    temperature: 0.1,
                     messages: [
                         { role: "system", content: sSystemPrompt },
                         { role: "user", content: sQuestion }
@@ -1535,12 +1778,25 @@ sap.ui.define([
                 })
             })
                 .then(function (res) {
-                    return res.json();
+                    return res.text().then(function (sBody) {
+                        var oData = null;
+                        try {
+                            oData = sBody ? JSON.parse(sBody) : null;
+                        } catch (e) {
+                            throw new Error("Unexpected response from Groq AI (HTTP " + res.status + ").");
+                        }
+                        if (!res.ok) {
+                            throw new Error((oData && oData.error && oData.error.message) || ("HTTP " + res.status));
+                        }
+                        return oData;
+                    });
                 })
                 .then(function (data) {
-                    if (data.choices && data.choices[0] && data.choices[0].message) {
-                        return data.choices[0].message.content;
-                    } else if (data.error) {
+                    if (data && data.choices && data.choices[0] && data.choices[0].message) {
+                        var sContent = String(data.choices[0].message.content || "");
+                        sContent = sContent.replace(/<think>[\s\S]*?<\/think>/gi, "").trim();
+                        return sContent || "Sorry, I could not generate an answer at this time.";
+                    } else if (data && data.error) {
                         throw new Error(data.error.message);
                     } else {
                         return "Sorry, I could not generate an answer at this time.";
