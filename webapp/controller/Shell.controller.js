@@ -158,6 +158,18 @@ sap.ui.define([
         return false;
     }
 
+    function isApprovedForAuthorityRole(oReq, bIsStudent, sViewerRole) {
+        if (bIsStudent) {
+            return true;
+        }
+        var sRole = String(sViewerRole || "").trim().toUpperCase();
+        if (!sRole) {
+            return false;
+        }
+        var sTargetRole = resolveAuthorityRole(oReq && oReq.Topic, oReq && oReq.AuthorityRole);
+        return !!sTargetRole && sTargetRole === sRole;
+    }
+
     return Controller.extend("zoa.zoarequestui.controller.Shell", {
 
         onInit: function () {
@@ -718,6 +730,7 @@ sap.ui.define([
                 aFilters.push(new Filter("Topic", FilterOperator.EQ, sType));
             }
             oRequestsList.getBinding("items").filter(aFilters);
+            this._applySearchVisibility();
         },
 
         _applySearchVisibility: function () {
@@ -729,11 +742,16 @@ sap.ui.define([
             var bIsStudent = !!oModel.getProperty("/isStudent");
             var sViewerRole = oModel.getProperty("/role");
             var sViewerUserId = oModel.getProperty("/userId");
+            var sStatusFilter = String(oModel.getProperty("/statusFilter") || "ALL").trim().toUpperCase();
             var sQuery = String(oModel.getProperty("/searchQuery") || "").toLowerCase();
             oRequestsList.getItems().forEach(function (oItem) {
                 var oCtx = oItem.getBindingContext();
                 var oObj = oCtx ? oCtx.getObject() : {};
                 if (!canViewRequest(oObj, bIsStudent, sViewerRole, sViewerUserId)) {
+                    oItem.setVisible(false);
+                    return;
+                }
+                if (sStatusFilter === "C" && !isApprovedForAuthorityRole(oObj, bIsStudent, sViewerRole)) {
                     oItem.setVisible(false);
                     return;
                 }
@@ -768,9 +786,15 @@ sap.ui.define([
                     var oCounts = { all: aVisible.length, pending: 0, approved: 0, declined: 0 };
                     aVisible.forEach(function (r) {
                         var st = normalizeStatusCode(r.Status, r.StatusText);
-                        if (st === "P") { oCounts.pending++; }
-                        else if (st === "C") { oCounts.approved++; }
-                        else if (st === "N") { oCounts.declined++; }
+                        if (st === "P") {
+                            oCounts.pending++;
+                        } else if (st === "C") {
+                            if (isApprovedForAuthorityRole(r, bIsStudent, sViewerRole)) {
+                                oCounts.approved++;
+                            }
+                        } else if (st === "N") {
+                            oCounts.declined++;
+                        }
                     });
                     oModel.setProperty("/counts", oCounts);
                 })
